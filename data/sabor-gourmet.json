@@ -1,0 +1,104 @@
+{
+  "customers" : [ {
+    "id" : 1,
+    "name" : "Ana Pérez",
+    "email" : "ana.perez@example.com",
+    "phone" : "+56911111111"
+  }, {
+    "id" : 2,
+    "name" : "Valentina Soto Saavedra",
+    "email" : "valentina.soto@example.com",
+    "phone" : "+56911110001"
+  }, {
+    "id" : 3,
+    "name" : "Matías Rojas",
+    "email" : "matias.rojas@example.com",
+    "phone" : "+56911110002"
+  }, {
+    "id" : 4,
+    "name" : "Camila Torres",
+    "email" : "camila.torres@example.com",
+    "phone" : "+56911110003"
+  }, {
+    "id" : 5,
+    "name" : "Sofía Herrera",
+    "email" : "sofia.herrera@example.com",
+    "phone" : "+56911110005"
+  }, {
+    "id" : 6,
+    "name" : "Nicolás Vega",
+    "email" : "nicolas.vega@example.com",
+    "phone" : "+56911110006"
+  }, {
+    "id" : 7,
+    "name" : "Constanza Valenzuela",
+    "email" : "constanza.valenzuela@example.com",
+    "phone" : "+56911110007"
+  } ],
+  "tables" : [ {
+    "id" : 1,
+    "number" : 1,
+    "capacity" : 4,
+    "available" : true
+  }, {
+    "id" : 2,
+    "number" : 2,
+    "capacity" : 2,
+    "available" : true
+  }, {
+    "id" : 3,
+    "number" : 3,
+    "capacity" : 2,
+    "available" : true
+  }, {
+    "id" : 4,
+    "number" : 4,
+    "capacity" : 4,
+    "available" : true
+  }, {
+    "id" : 5,
+    "number" : 5,
+    "capacity" : 4,
+    "available" : true
+  }, {
+    "id" : 6,
+    "number" : 6,
+    "capacity" : 6,
+    "available" : true
+  }, {
+    "id" : 7,
+    "number" : 7,
+    "capacity" : 6,
+    "available" : true
+  }, {
+    "id" : 8,
+    "number" : 8,
+    "capacity" : 8,
+    "available" : true
+  }, {
+    "id" : 9,
+    "number" : 9,
+    "capacity" : 10,
+    "available" : true
+  }, {
+    "id" : 10,
+    "number" : 10,
+    "capacity" : 10,
+    "available" : true
+  } ],
+  "reservations" : [ {
+    "id" : 1,
+    "customerId" : 1,
+    "tableId" : 1,
+    "startTime" : "2026-11-20T20:00",
+    "people" : 2,
+    "status" : "CONFIRMED"
+  }, {
+    "id" : 2,
+    "customerId" : 2,
+    "tableId" : 2,
+    "startTime" : "2026-11-16T20:00",
+    "people" : 2,
+    "status" : "CONFIRMED"
+  } ]
+}
