@@ -3,7 +3,9 @@ package cl.ipss.sabor_gourmet.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 
 /**
  * Representa el intervalo que se usa para comparar reservas. La aplicación no
@@ -13,6 +15,10 @@ public record TimeRange(LocalDateTime start, LocalDateTime end) {
 
     private static final long RESERVATION_DURATION_MINUTES = 120;
     private static final ZoneId SANTIAGO_ZONE = ZoneId.of("America/Santiago");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MM-uuuu")
+            .withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter START_FORMAT = DateTimeFormatter.ofPattern("dd-MM-uuuu'T'HH:mm")
+            .withResolverStyle(ResolverStyle.STRICT);
 
     // El turno de una reserva comienza en startTime y termina exactamente 120 minutos después.
     public static TimeRange fromStart(String startTime) {
@@ -21,21 +27,29 @@ public record TimeRange(LocalDateTime start, LocalDateTime end) {
                 throw new IllegalArgumentException("startTime is required");
             }
 
-            LocalDateTime start = LocalDateTime.parse(startTime);
+            LocalDateTime start = LocalDateTime.parse(startTime, START_FORMAT);
             return new TimeRange(start, start.plusMinutes(RESERVATION_DURATION_MINUTES));
         } catch (DateTimeParseException exception) {
-            throw new IllegalArgumentException("startTime must use ISO format yyyy-MM-dd'T'HH:mm", exception);
+            throw new IllegalArgumentException("startTime must use format dd-MM-yyyy'T'HH:mm", exception);
         }
     }
 
-    // date representa el día completo: desde la medianoche incluida hasta la medianoche siguiente excluida.
+    // date usa día-mes-año. El día va desde la medianoche incluida hasta la medianoche siguiente excluida.
     public static TimeRange fromDate(String date) {
         try {
-            LocalDate day = LocalDate.parse(date);
-            return new TimeRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+            return fromLocalDate(LocalDate.parse(date, DATE_FORMAT));
         } catch (DateTimeParseException exception) {
-            throw new IllegalArgumentException("date must use ISO format yyyy-MM-dd", exception);
+            throw new IllegalArgumentException("date must use format dd-MM-yyyy", exception);
         }
+    }
+
+    // Guarda y devuelve startTime en el mismo formato día-mes-año que recibe la API.
+    public static String formatStart(LocalDateTime start) {
+        return START_FORMAT.format(start);
+    }
+
+    private static TimeRange fromLocalDate(LocalDate day) {
+        return new TimeRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
     }
 
     // La misma comparación se usa para disponibilidad, creación y modificación de reservas.
@@ -62,7 +76,6 @@ public record TimeRange(LocalDateTime start, LocalDateTime end) {
             return fromDate(date);
         }
 
-        LocalDate today = currentDate();
-        return fromDate(today.toString());
+        return fromLocalDate(currentDate());
     }
 }

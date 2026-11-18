@@ -31,13 +31,42 @@ public class TableController {
         this.tableService = tableService;
     }
 
-    // La consulta no aplica filtros: devuelve el inventario persistido completo.
+    // Obtiene todas las mesas
     @GetMapping
     public ResponseEntity<List<Table>> getTables() {
         return ResponseEntity.ok(tableService.getAllTables());
     }
 
-    // El Service decide si el rango es un turno, un día indicado o el día actual.
+    // Obtiene una mesa por su ID
+    @GetMapping("/{id}")
+    public ResponseEntity<Table> getTable(@PathVariable Long id) {
+        return ResponseEntity.ok(tableService.getTable(id));
+    }
+
+    // Crea una nueva mesa
+    @PostMapping
+    public ResponseEntity<Table> createTable(@Valid @RequestBody TableRequest request) {
+        Table table = tableService.createTable(request);
+        return ResponseEntity.created(URI.create("/tables/" + table.id())).body(table);
+    }
+
+    // Actualiza una mesa existente
+    @PutMapping("/{id}")
+    public ResponseEntity<Table> updateTable(
+            @PathVariable Long id,
+            @Valid @RequestBody TableRequest request
+    ) {
+        return ResponseEntity.ok(tableService.updateTable(id, request));
+    }
+
+    // Elimina una mesa existente
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTable(@PathVariable Long id) {
+        tableService.deleteTable(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Obtiene las mesas disponibles para una fecha, hora y cantidad de personas
     @GetMapping("/available")
     public ResponseEntity<List<Table>> getAvailableTables(
             @RequestParam(required = false) String date,
@@ -47,38 +76,12 @@ public class TableController {
         return ResponseEntity.ok(tableService.getAvailableTables(date, startTime, people));
     }
 
-    // Se devuelve cada mesa con alguna reserva confirmada superpuesta, una sola vez.
+    // Obtiene las mesas reservadas para una fecha y hora
     @GetMapping("/reserved")
     public ResponseEntity<List<Table>> getReservedTables(
             @RequestParam(required = false) String date,
             @RequestParam(required = false) String startTime
     ) {
         return ResponseEntity.ok(tableService.getReservedTables(date, startTime));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Table> getTable(@PathVariable Long id) {
-        return ResponseEntity.ok(tableService.getTable(id));
-    }
-
-    // El Service impide superar el máximo de diez mesas antes de escribir el JSON.
-    @PostMapping
-    public ResponseEntity<Table> createTable(@Valid @RequestBody TableRequest request) {
-        Table table = tableService.createTable(request);
-        return ResponseEntity.created(URI.create("/tables/" + table.id())).body(table);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Table> updateTable(
-            @PathVariable Long id,
-            @Valid @RequestBody TableRequest request
-    ) {
-        return ResponseEntity.ok(tableService.updateTable(id, request));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTable(@PathVariable Long id) {
-        tableService.deleteTable(id);
-        return ResponseEntity.noContent().build();
     }
 }

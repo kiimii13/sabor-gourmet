@@ -45,7 +45,7 @@ class TableServiceTest {
                         1L,
                         1L,
                         1L,
-                        "2099-01-01T20:00",
+                        "01-01-2099T20:00",
                         2,
                         "CONFIRMED"
                 ))
@@ -64,7 +64,7 @@ class TableServiceTest {
 
     @Test
     void excludesReservedTableAndKeepsExistingTableUpdatable() {
-        List<Table> availableTables = tableService.getAvailableTables(null, "2099-01-01T20:30", null);
+        List<Table> availableTables = tableService.getAvailableTables(null, "01-01-2099T20:30", null);
 
         assertEquals(9, availableTables.size());
         assertFalse(availableTables.stream().anyMatch(table -> table.id() == 1L));
@@ -76,7 +76,7 @@ class TableServiceTest {
 
     @Test
     void filtersAvailableTablesByCapacity() {
-        List<Table> availableTables = tableService.getAvailableTables("2099-01-02", null, 4);
+        List<Table> availableTables = tableService.getAvailableTables("02-01-2099", null, 4);
 
         assertTrue(availableTables.stream().anyMatch(table -> table.id() == 4L));
         assertFalse(availableTables.stream().anyMatch(table -> table.id() == 3L));
@@ -92,7 +92,7 @@ class TableServiceTest {
 
     @Test
     void returnsEachReservedTableOnce() {
-        List<Table> reservedTables = tableService.getReservedTables(null, "2099-01-01T20:30");
+        List<Table> reservedTables = tableService.getReservedTables(null, "01-01-2099T20:30");
 
         assertEquals(1, reservedTables.size());
         assertEquals(1L, reservedTables.get(0).id());
@@ -102,7 +102,7 @@ class TableServiceTest {
     void rejectsDateAndStartTimeTogether() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> tableService.getReservedTables("2099-01-01", "2099-01-01T20:30")
+                () -> tableService.getReservedTables("01-01-2099", "01-01-2099T20:30")
         );
     }
 }

@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Documento completo que se serializa en el único archivo JSON del restaurante.
- * Mantener las tres listas juntas permite actualizar una sin perder las demás.
+ * Modelo de datos del restaurante
  */
 public class RestaurantData {
 

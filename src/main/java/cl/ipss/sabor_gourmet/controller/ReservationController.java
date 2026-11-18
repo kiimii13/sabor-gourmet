@@ -31,7 +31,7 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    // Con date se consulta un día completo; sin date se conserva el listado vigente.
+    // Obtiene las reservas vigentes o por fecha específica
     @GetMapping
     public ResponseEntity<List<Reservation>> getCurrentReservations(
             @RequestParam(required = false) String date
@@ -39,19 +39,20 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getReservations(date));
     }
 
+    // Obtiene una reserva por su ID
     @GetMapping("/{id}")
     public ResponseEntity<Reservation> getReservation(@PathVariable Long id) {
         return ResponseEntity.ok(reservationService.getReservation(id));
     }
 
-    // La respuesta 201 incluye la reserva persistida y su ubicación REST.
+    // Crea una nueva reserva
     @PostMapping
     public ResponseEntity<Reservation> createReservation(@Valid @RequestBody ReservationRequest request) {
         Reservation reservation = reservationService.createReservation(request);
         return ResponseEntity.created(URI.create("/reservations/" + reservation.id())).body(reservation);
     }
 
-    // El Service vuelve a validar referencias, capacidad y solapamientos al modificar.
+    // Actualiza una reserva existente
     @PutMapping("/{id}")
     public ResponseEntity<Reservation> updateReservation(
             @PathVariable Long id,
@@ -60,7 +61,7 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.updateReservation(id, request));
     }
 
-    // Cancelar cambia el estado a CANCELLED; no elimina el historial del JSON.
+    // Cancela una reserva existente
     @DeleteMapping("/{id}")
     public ResponseEntity<Reservation> cancelReservation(@PathVariable Long id) {
         return ResponseEntity.ok(reservationService.cancelReservation(id));

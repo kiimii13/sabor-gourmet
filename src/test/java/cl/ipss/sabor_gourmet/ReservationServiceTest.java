@@ -53,7 +53,7 @@ class ReservationServiceTest {
         ReservationRequest firstRequest = new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T19:00",
+                "01-01-2099T19:00",
                 2
         );
         Reservation created = reservationService.createReservation(firstRequest);
@@ -61,16 +61,16 @@ class ReservationServiceTest {
         ReservationRequest overlappingRequest = new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T20:30",
+                "01-01-2099T20:30",
                 2
         );
         assertThrows(ConflictException.class, () -> reservationService.createReservation(overlappingRequest));
-        assertEquals(0, tableService.getAvailableTables(null, "2099-01-01T19:30", null).size());
+        assertEquals(0, tableService.getAvailableTables(null, "01-01-2099T19:30", null).size());
 
         Reservation cancelled = reservationService.cancelReservation(created.id());
 
         assertEquals("CANCELLED", cancelled.status());
-        assertEquals(1, tableService.getAvailableTables(null, "2099-01-01T19:30", null).size());
+        assertEquals(1, tableService.getAvailableTables(null, "01-01-2099T19:30", null).size());
         assertEquals(1, repository.read().getCustomers().size());
         assertEquals(1, repository.read().getTables().size());
         assertEquals("CANCELLED", repository.read().getReservations().get(0).status());
@@ -81,7 +81,7 @@ class ReservationServiceTest {
         ReservationRequest missingCustomer = new ReservationRequest(
                 99L,
                 1L,
-                "2099-01-01T19:00",
+                "01-01-2099T19:00",
                 2
         );
         assertThrows(ResourceNotFoundException.class, () -> reservationService.createReservation(missingCustomer));
@@ -89,7 +89,7 @@ class ReservationServiceTest {
         ReservationRequest tooManyPeople = new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T19:00",
+                "01-01-2099T19:00",
                 5
         );
         assertThrows(ConflictException.class, () -> reservationService.createReservation(tooManyPeople));
@@ -100,11 +100,11 @@ class ReservationServiceTest {
         reservationService.createReservation(new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T19:00",
+                "01-01-2099T19:00",
                 2
         ));
 
-        assertEquals(1, reservationService.getReservations("2099-01-01").size());
+        assertEquals(1, reservationService.getReservations("01-01-2099").size());
     }
 
     @Test
@@ -112,14 +112,14 @@ class ReservationServiceTest {
         reservationService.createReservation(new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T23:30",
+                "01-01-2099T23:30",
                 2
         ));
 
-        assertEquals(1, reservationService.getReservations("2099-01-01").size());
-        assertEquals(1, reservationService.getReservations("2099-01-02").size());
-        assertEquals(1, tableService.getReservedTables("2099-01-01", null).size());
-        assertEquals(1, tableService.getReservedTables("2099-01-02", null).size());
+        assertEquals(1, reservationService.getReservations("01-01-2099").size());
+        assertEquals(1, reservationService.getReservations("02-01-2099").size());
+        assertEquals(1, tableService.getReservedTables("01-01-2099", null).size());
+        assertEquals(1, tableService.getReservedTables("02-01-2099", null).size());
     }
 
     @Test
@@ -127,7 +127,7 @@ class ReservationServiceTest {
         ReservationRequest request = new ReservationRequest(
                 1L,
                 1L,
-                "2099-01-01T19:00",
+                "01-01-2099T19:00",
                 2
         );
         Reservation created = reservationService.createReservation(request);

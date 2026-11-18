@@ -20,7 +20,7 @@
 - Reservas con duración fija de 120 minutos calculada desde `startTime`.
 - Consultas de mesas disponibles y reservadas por turno, por fecha o por el día actual en `America/Santiago`.
 - `date` y `startTime` no se pueden enviar juntos; la API responde `400 Bad Request`.
-- `GET /reservations?date=YYYY-MM-DD` filtra reservas confirmadas que se cruzan con el día indicado.
+- `GET /reservations?date=dd-MM-yyyy` filtra reservas confirmadas que se cruzan con el día indicado. `startTime` usa `dd-MM-yyyy'T'HH:mm`.
 - Sin `date`, `GET /reservations` conserva el criterio de reservas confirmadas cuyo turno aún no termina.
 - Las cancelaciones conservan el registro y cambian `status` a `CANCELLED`; no bloquean mesas.
 - Las reservas no permiten clientes o mesas inexistentes, mesas deshabilitadas, capacidad insuficiente ni solapamientos confirmados.
@@ -31,8 +31,8 @@
 
 El archivo contiene 10 mesas y dos reservas confirmadas:
 
-- Ana: `customerId: 1`, `tableId: 1`, `startTime: 2026-11-20T20:00`.
-- Reserva del día observado: `customerId: 2`, `tableId: 2`, `startTime: 2026-11-16T20:00`.
+- Ana: `customerId: 1`, `tableId: 1`, `startTime: 20-11-2026T20:00`.
+- Reserva del día observado: `customerId: 2`, `tableId: 2`, `startTime: 16-11-2026T20:00`.
 
 Los horarios terminan dos horas después y no se almacenan como `endTime`.
 

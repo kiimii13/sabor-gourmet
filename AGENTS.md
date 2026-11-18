@@ -62,7 +62,7 @@
 ## Reservas y validaciones
 
 - `GET /reservations` sin fecha mantiene el listado actual de reservas confirmadas cuyo término calculado todavía es posterior a la hora actual.
-- `GET /reservations?date=YYYY-MM-DD` devuelve reservas `CONFIRMED` que se cruzan con ese día completo.
+- `GET /reservations?date=dd-MM-yyyy` devuelve reservas `CONFIRMED` que se cruzan con ese día completo.
 - `POST /reservations` y `PUT /reservations/{id}` requieren `customerId`, `tableId`, `startTime` y `people`.
 - El `Service` valida que existan el cliente y la mesa, que la mesa esté habilitada, que tenga capacidad suficiente, que `startTime` sea válido y que no exista otra reserva confirmada superpuesta.
 - Al modificar, se excluye la reserva que está siendo editada del control de solapamiento.

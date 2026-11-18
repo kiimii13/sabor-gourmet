@@ -42,10 +42,10 @@ class TableControllerTest {
 
     @Test
     void dateFilterSeparatesTodayFromNovemberTwentieth() {
-        ResponseEntity<List<Table>> todayReserved = tableController.getReservedTables("2026-11-16", null);
-        ResponseEntity<List<Table>> todayAvailable = tableController.getAvailableTables("2026-11-16", null, null);
-        ResponseEntity<List<Table>> futureReserved = tableController.getReservedTables("2026-11-20", null);
-        ResponseEntity<List<Table>> futureAvailable = tableController.getAvailableTables("2026-11-20", null, null);
+        ResponseEntity<List<Table>> todayReserved = tableController.getReservedTables("16-11-2026", null);
+        ResponseEntity<List<Table>> todayAvailable = tableController.getAvailableTables("16-11-2026", null, null);
+        ResponseEntity<List<Table>> futureReserved = tableController.getReservedTables("20-11-2026", null);
+        ResponseEntity<List<Table>> futureAvailable = tableController.getAvailableTables("20-11-2026", null, null);
 
         assertTrue(todayReserved.getBody().stream().anyMatch(table -> table.id() == 2L));
         assertTrue(todayAvailable.getBody().stream().anyMatch(table -> table.id() == 1L));
@@ -56,7 +56,7 @@ class TableControllerTest {
     @Test
     void filtersAvailableTablesByCapacity() {
         ResponseEntity<List<Table>> response = tableController.getAvailableTables(
-                "2099-01-01",
+                "01-01-2099",
                 null,
                 4
         );
@@ -77,7 +77,7 @@ class TableControllerTest {
     void dateAndStartTimeCannotBeCombined() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> tableController.getAvailableTables("2026-11-16", "2026-11-16T20:00", null)
+                () -> tableController.getAvailableTables("16-11-2026", "16-11-2026T20:00", null)
         );
     }
 }

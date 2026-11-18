@@ -73,7 +73,7 @@ public class ReservationService {
                     nextId(data.getReservations()),
                     request.customerId(),
                     request.tableId(),
-                    range.start().toString(),
+                    TimeRange.formatStart(range.start()),
                     request.people(),
                     CONFIRMED
             );
@@ -101,7 +101,7 @@ public class ReservationService {
                     id,
                     request.customerId(),
                     request.tableId(),
-                    range.start().toString(),
+                    TimeRange.formatStart(range.start()),
                     request.people(),
                     CONFIRMED
             );

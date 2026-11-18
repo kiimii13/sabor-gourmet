@@ -147,7 +147,7 @@ El cuerpo de creación y modificación solo recibe:
 {
   "customerId": 1,
   "tableId": 3,
-  "startTime": "2026-12-01T18:00",
+  "startTime": "01-12-2026T18:00",
   "people": 2
 }
 ```
@@ -315,7 +315,7 @@ public Reservation createReservation(ReservationRequest request) {
                 nextId(data.getReservations()),
                 request.customerId(),
                 request.tableId(),
-                range.start().toString(),
+                TimeRange.formatStart(range.start()),
                 request.people(),
                 CONFIRMED
         );
@@ -412,20 +412,19 @@ public static TimeRange fromStart(String startTime) {
             throw new IllegalArgumentException("startTime is required");
         }
 
-        LocalDateTime start = LocalDateTime.parse(startTime);
+        LocalDateTime start = LocalDateTime.parse(startTime, START_FORMAT);
         return new TimeRange(start, start.plusMinutes(RESERVATION_DURATION_MINUTES));
     } catch (DateTimeParseException exception) {
-        throw new IllegalArgumentException("startTime must use ISO format yyyy-MM-dd'T'HH:mm", exception);
+        throw new IllegalArgumentException("startTime must use format dd-MM-yyyy'T'HH:mm", exception);
     }
 }
 
 // date representa el día completo: desde la medianoche incluida hasta la medianoche siguiente excluida.
 public static TimeRange fromDate(String date) {
     try {
-        LocalDate day = LocalDate.parse(date);
-        return new TimeRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+        return fromLocalDate(LocalDate.parse(date, DATE_FORMAT));
     } catch (DateTimeParseException exception) {
-        throw new IllegalArgumentException("date must use ISO format yyyy-MM-dd", exception);
+        throw new IllegalArgumentException("date must use format dd-MM-yyyy", exception);
     }
 }
 
@@ -441,8 +440,7 @@ public static TimeRange resolve(String date, String startTime) {
         return fromDate(date);
     }
 
-    LocalDate today = currentDate();
-    return fromDate(today.toString());
+    return fromLocalDate(currentDate());
 }
 ```
 
@@ -471,7 +469,7 @@ public Reservation updateReservation(Long id, ReservationRequest request) {
                 id,
                 request.customerId(),
                 request.tableId(),
-                range.start().toString(),
+                TimeRange.formatStart(range.start()),
                 request.people(),
                 CONFIRMED
         );
@@ -585,7 +583,7 @@ Base URL sugerida:
 http://localhost:8080
 ```
 
-En la última revisión, la fecha del sistema usada por las pruebas fue `2026-11-16` en `America/Santiago`. Si se ejecuta la prueba en otra fecha, reemplazar `2026-11-16` por la fecha actual de Santiago en las consultas sin fecha explícita. La reserva de Ana permanece en `2026-11-20`.
+En la última revisión, la fecha del sistema usada por las pruebas fue `16-11-2026` en `America/Santiago`. Si se ejecuta la prueba en otra fecha, reemplazar `16-11-2026` por la fecha actual de Santiago en las consultas sin fecha explícita. La reserva de Ana permanece en `20-11-2026`.
 
 Body: seleccionar `raw` y `JSON` cuando se indique un cuerpo. Las respuestas no contienen `endTime`.
 
@@ -632,7 +630,7 @@ Esperado:
 #### Disponibles del 16 de noviembre
 
 ```http
-GET http://localhost:8080/tables/available?date=2026-11-16
+GET http://localhost:8080/tables/available?date=16-11-2026
 ```
 
 Esperado: `200 OK`; la mesa `2` no aparece y la mesa `1` sí aparece.
@@ -640,7 +638,7 @@ Esperado: `200 OK`; la mesa `2` no aparece y la mesa `1` sí aparece.
 #### Reservadas del 16 de noviembre
 
 ```http
-GET http://localhost:8080/tables/reserved?date=2026-11-16
+GET http://localhost:8080/tables/reserved?date=16-11-2026
 ```
 
 Esperado: `200 OK`; devuelve la mesa `2` una sola vez.
@@ -648,7 +646,7 @@ Esperado: `200 OK`; devuelve la mesa `2` una sola vez.
 #### Reservadas del 20 de noviembre
 
 ```http
-GET http://localhost:8080/tables/reserved?date=2026-11-20
+GET http://localhost:8080/tables/reserved?date=20-11-2026
 ```
 
 Esperado: `200 OK`; devuelve la mesa `1`, correspondiente a la reserva de Ana.
@@ -664,7 +662,7 @@ La comparación entre el 16 y el 20 demuestra que la reserva de Ana no bloquea l
 ### 8.4 Consultar reservas por fecha
 
 ```http
-GET http://localhost:8080/reservations?date=2026-11-16
+GET http://localhost:8080/reservations?date=16-11-2026
 ```
 
 Body: ninguno.
@@ -677,7 +675,7 @@ Esperado: `200 OK` y la reserva confirmada de la mesa `2`.
     "id": 2,
     "customerId": 2,
     "tableId": 2,
-    "startTime": "2026-11-16T20:00",
+    "startTime": "16-11-2026T20:00",
     "people": 2,
     "status": "CONFIRMED"
   }
@@ -687,7 +685,7 @@ Esperado: `200 OK` y la reserva confirmada de la mesa `2`.
 Para Ana:
 
 ```http
-GET http://localhost:8080/reservations?date=2026-11-20
+GET http://localhost:8080/reservations?date=20-11-2026
 ```
 
 Esperado: la reserva con `id: 1`, `customerId: 1` y `tableId: 1`.
@@ -695,7 +693,7 @@ Esperado: la reserva con `id: 1`, `customerId: 1` y `tableId: 1`.
 ### 8.5 Consultar un turno específico
 
 ```http
-GET http://localhost:8080/tables/available?startTime=2026-11-16T20:00
+GET http://localhost:8080/tables/available?startTime=16-11-2026T20:00
 ```
 
 Esperado: `200 OK`; la mesa `2` queda fuera del turno de 20:00 a 22:00.
@@ -703,7 +701,7 @@ Esperado: `200 OK`; la mesa `2` queda fuera del turno de 20:00 a 22:00.
 No enviar `date` junto con `startTime`:
 
 ```http
-GET http://localhost:8080/tables/available?date=2026-11-16&startTime=2026-11-16T20:00
+GET http://localhost:8080/tables/available?date=16-11-2026&startTime=16-11-2026T20:00
 ```
 
 Esperado: `400 Bad Request` con un mensaje equivalente a:
@@ -721,8 +719,8 @@ El parámetro `people` se omite para no filtrar por capacidad. Cuando se envía,
 ```http
 GET http://localhost:8080/tables/available
 GET http://localhost:8080/tables/available?people=4
-GET http://localhost:8080/tables/available?date=2027-01-10&people=4
-GET http://localhost:8080/tables/available?startTime=2027-01-10T18:00&people=4
+GET http://localhost:8080/tables/available?date=10-01-2027&people=4
+GET http://localhost:8080/tables/available?startTime=10-01-2027T18:00&people=4
 GET http://localhost:8080/tables/available?people=0
 ```
 
@@ -741,7 +739,7 @@ Content-Type: application/json
 {
   "customerId": 1,
   "tableId": 3,
-  "startTime": "2026-12-01T18:00",
+  "startTime": "01-12-2026T18:00",
   "people": 2
 }
 ```
@@ -770,7 +768,7 @@ Content-Type: application/json
 {
   "customerId": 1,
   "tableId": 3,
-  "startTime": "2026-12-01T19:00",
+  "startTime": "01-12-2026T19:00",
   "people": 2
 }
 ```
@@ -794,7 +792,7 @@ Content-Type: application/json
 {
   "customerId": 1,
   "tableId": 4,
-  "startTime": "2026-12-01T18:30",
+  "startTime": "01-12-2026T18:30",
   "people": 2
 }
 ```

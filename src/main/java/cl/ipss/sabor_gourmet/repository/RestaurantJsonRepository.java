@@ -17,8 +17,7 @@ import java.util.ArrayList;
 import java.util.function.Function;
 
 /**
- * Único punto de acceso al archivo JSON. Lee el documento completo y escribe
- * de nuevo sus tres colecciones para conservar la coherencia entre referencias.
+ * Repositorio para el archivo JSON del restaurante
  */
 @Repository
 public class RestaurantJsonRepository {

@@ -90,14 +90,14 @@
     "id" : 1,
     "customerId" : 1,
     "tableId" : 1,
-    "startTime" : "2026-11-20T20:00",
+    "startTime" : "20-11-2026T20:00",
     "people" : 2,
     "status" : "CONFIRMED"
   }, {
     "id" : 2,
     "customerId" : 2,
     "tableId" : 2,
-    "startTime" : "2026-11-16T20:00",
+    "startTime" : "16-11-2026T20:00",
     "people" : 2,
     "status" : "CONFIRMED"
   } ]

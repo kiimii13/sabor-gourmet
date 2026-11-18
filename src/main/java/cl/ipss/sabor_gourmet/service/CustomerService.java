@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Gestiona clientes y protege las referencias que las reservas guardan por ID.
+ * Servicio para los clientes
  */
 @Service
 public class CustomerService {
@@ -22,19 +22,20 @@ public class CustomerService {
         this.repository = repository;
     }
 
-    // La colección se lee desde el documento completo y se devuelve sin duplicar datos.
+    // Obtiene todos los clientes
     public List<Customer> getAllCustomers() {
         return repository.read().getCustomers();
     }
 
+    // Obtiene un cliente por su ID
     public Customer getCustomer(Long id) {
         return repository.read().getCustomers().stream()
                 .filter(customer -> Objects.equals(customer.id(), id))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado: " + id));
     }
 
-    // El cliente se agrega mediante Repository para persistirlo sin perder mesas ni reservas.
+    // Crea un nuevo cliente
     public Customer createCustomer(CustomerRequest request) {
         return repository.update(data -> {
             Customer customer = new Customer(
@@ -48,7 +49,7 @@ public class CustomerService {
         });
     }
 
-    // La actualización conserva el ID porque las reservas dependen de esa referencia.
+    // Actualiza un cliente existente
     public Customer updateCustomer(Long id, CustomerRequest request) {
         return repository.update(data -> {
             int index = indexOf(data.getCustomers(), id);
@@ -63,29 +64,31 @@ public class CustomerService {
         });
     }
 
-    // No se permite eliminar un cliente si alguna reserva todavía conserva su customerId.
+    // Elimina un cliente existente
     public void deleteCustomer(Long id) {
         repository.update(data -> {
             int index = indexOf(data.getCustomers(), id);
             boolean referenced = data.getReservations().stream()
                     .anyMatch(reservation -> Objects.equals(reservation.customerId(), id));
             if (referenced) {
-                throw new ConflictException("Customer is referenced by a reservation: " + id);
+                throw new ConflictException("Cliente referenciado por una reserva: " + id);
             }
             data.getCustomers().remove(index);
             return null;
         });
     }
 
+    // Obtiene el índice de un cliente por su ID
     private int indexOf(List<Customer> customers, Long id) {
         for (int index = 0; index < customers.size(); index++) {
             if (Objects.equals(customers.get(index).id(), id)) {
                 return index;
             }
         }
-        throw new ResourceNotFoundException("Customer not found: " + id);
+        throw new ResourceNotFoundException("Cliente no encontrado: " + id);
     }
 
+    // Obtiene el siguiente ID disponible para un cliente
     private Long nextId(List<Customer> customers) {
         return customers.stream()
                 .map(Customer::id)

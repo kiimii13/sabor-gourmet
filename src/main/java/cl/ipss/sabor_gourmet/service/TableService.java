@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Aplica las reglas del inventario: capacidad, habilitación, límite de mesas
- * y bloqueo producido por reservas confirmadas.
+ * Servicio para las mesas
  */
 @Service
 public class TableService {
@@ -27,29 +26,27 @@ public class TableService {
         this.repository = repository;
     }
 
-    // El Repository normaliza el documento y devuelve la colección tables del archivo JSON.
+    // Obtiene todas las mesas
     public List<Table> getAllTables() {
         return repository.read().getTables();
     }
 
-    // La búsqueda se hace por el ID persistido, que es también el valor usado por las reservas.
+    // Obtiene una mesa por su ID
     public Table getTable(Long id) {
         return repository.read().getTables().stream()
                 .filter(table -> Objects.equals(table.id(), id))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Table not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada: " + id));
     }
 
-    // Se consideran solo mesas habilitadas y se exige que ninguna reserva confirmada cruce el rango completo.
-    // El rango puede ser un turno de 120 minutos o un día completo.
+    // Obtiene las mesas disponibles para una fecha, hora y cantidad de personas
     public List<Table> getAvailableTables(String date, String startTime, Integer people) {
         if (people != null && people < 1) {
-            throw new IllegalArgumentException("people must be greater than or equal to 1");
+            throw new IllegalArgumentException("La cantidad de personas debe ser mayor o igual a 1");
         }
 
         TimeRange requestedRange = TimeRange.resolve(date, startTime);
         var data = repository.read();
-        // La capacidad se filtra después de resolver el período y antes de devolver las mesas libres.
         return data.getTables().stream()
                 .filter(table -> Boolean.TRUE.equals(table.available()))
                 .filter(table -> people == null || table.capacity() >= people)
@@ -61,12 +58,10 @@ public class TableService {
                 .toList();
     }
 
-    // Una reserva confirmada superpuesta bloquea la mesa; una cancelada no participa en el filtro.
-    // Como se parte de la lista de mesas, cada mesa aparece como máximo una vez.
+    // Obtiene las mesas reservadas para una fecha y hora
     public List<Table> getReservedTables(String date, String startTime) {
         TimeRange requestedRange = TimeRange.resolve(date, startTime);
         var data = repository.read();
-        // Se recorre cada mesa una sola vez y se ignoran las reservas canceladas.
         return data.getTables().stream()
                 .filter(table -> data.getReservations().stream()
                         .filter(reservation -> CONFIRMED.equals(reservation.status()))
@@ -76,7 +71,7 @@ public class TableService {
                 .toList();
     }
 
-    // El límite se valida dentro del Service y la operación completa se persiste mediante el Repository.
+    // Crea una nueva mesa
     public Table createTable(TableRequest request) {
         return repository.update(data -> {
             if (data.getTables().size() >= MAX_TABLES) {
@@ -89,10 +84,10 @@ public class TableService {
         });
     }
 
+    // Actualiza una mesa existente
     public Table updateTable(Long id, TableRequest request) {
         return repository.update(data -> {
             int index = indexOf(data.getTables(), id);
-            // No se permite reducir la capacidad si una reserva vigente dejaría de caber.
             validateActiveReservationsCapacity(data.getReservations(), id, request.capacity());
             Table updated = new Table(id, request.number(), request.capacity(), request.available());
             data.getTables().set(index, updated);
@@ -100,14 +95,14 @@ public class TableService {
         });
     }
 
-    // Una mesa referenciada no se elimina: así nunca quedan reservas apuntando a un ID inexistente.
+    // Elimina una mesa existente
     public void deleteTable(Long id) {
         repository.update(data -> {
             int index = indexOf(data.getTables(), id);
             boolean referenced = data.getReservations().stream()
                     .anyMatch(reservation -> Objects.equals(reservation.tableId(), id));
             if (referenced) {
-                throw new ConflictException("Table is referenced by a reservation: " + id);
+                throw new ConflictException("Mesa referenciada por una reserva: " + id);
             }
             data.getTables().remove(index);
             return null;
@@ -115,7 +110,7 @@ public class TableService {
     }
 
 
-    // Reducir capacidad solo es válido si ninguna reserva confirmada aún vigente quedaría sin espacio.
+    // Valida la capacidad de la mesa
     private void validateActiveReservationsCapacity(List<Reservation> reservations, Long tableId, int capacity) {
         var now = TimeRange.currentDateTime();
         boolean invalid = reservations.stream()
@@ -125,21 +120,21 @@ public class TableService {
                 .anyMatch(reservation -> reservation.people() > capacity);
 
         if (invalid) {
-            throw new ConflictException("Capacity cannot be lower than an active reservation");
+            throw new ConflictException("La capacidad no puede ser menor que una reserva activa");
         }
     }
 
-    // Los métodos de actualización y eliminación usan el ID, no el número visible de la mesa.
+    // Obtiene el índice de una mesa por su ID
     private int indexOf(List<Table> tables, Long id) {
         for (int index = 0; index < tables.size(); index++) {
             if (Objects.equals(tables.get(index).id(), id)) {
                 return index;
             }
         }
-        throw new ResourceNotFoundException("Table not found: " + id);
+        throw new ResourceNotFoundException("Mesa no encontrada: " + id);
     }
 
-    // El siguiente ID se calcula a partir del mayor ID existente para no reutilizar referencias.
+    // Obtiene el siguiente ID disponible para una mesa
     private Long nextId(List<Table> tables) {
         return tables.stream()
                 .map(Table::id)
