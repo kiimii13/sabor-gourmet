@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import cl.ipss.sabor_gourmet.exception.ConflictException;
 import cl.ipss.sabor_gourmet.exception.ResourceNotFoundException;
 import cl.ipss.sabor_gourmet.model.Customer;
-import cl.ipss.sabor_gourmet.model.CustomerRequest;
+import cl.ipss.sabor_gourmet.dto.CustomerRequest;
 import cl.ipss.sabor_gourmet.repository.RestaurantJsonRepository;
 
 import java.util.List;

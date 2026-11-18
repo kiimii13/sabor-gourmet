@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import cl.ipss.sabor_gourmet.model.Table;
-import cl.ipss.sabor_gourmet.model.TableRequest;
+import cl.ipss.sabor_gourmet.dto.TableRequest;
 import cl.ipss.sabor_gourmet.service.TableService;
 
 import java.net.URI;

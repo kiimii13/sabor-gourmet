@@ -1,7 +1,7 @@
 package cl.ipss.sabor_gourmet.model;
 
 /**
- * Configuración persistida de una mesa y su capacidad para recibir personas.
+ * Modelo de mesa
  */
 public record Table(
         Long id,

@@ -38,29 +38,28 @@ public class RestaurantJsonRepository {
         this.dataFile = dataFile;
     }
 
-    // Cada consulta vuelve a leer el archivo para trabajar con el estado persistido más reciente.
+    // Lee el archivo JSON y lo convierte en datos
     public synchronized RestaurantData read() {
         try {
             return normalize(objectMapper.readValue(Files.readString(dataFile), RestaurantData.class));
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read restaurant data", exception);
+            throw new IllegalStateException("No se pudieron leer los datos del restaurante", exception);
         }
     }
 
+    // Lee el JSON, aplica el cambio y lo guarda.
     public synchronized <T> T update(Function<RestaurantData, T> operation) {
-        // Se conserva el documento completo: se cambia una colección y se mantienen intactas las otras.
         RestaurantData data = read();
         T result = operation.apply(data);
         write(data);
         return result;
     }
 
-    // La escritura reemplaza el archivo con el estado completo, por lo que las otras colecciones se conservan.
+    // Guarda el JSON con los datos ya modificados.
     private void write(RestaurantData data) {
         try {
             Files.createDirectories(dataFile.getParent());
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
-            // La escritura reemplaza el archivo con el estado completo y actualizado del restaurante.
             Files.writeString(
                     dataFile,
                     json,
@@ -69,11 +68,11 @@ public class RestaurantJsonRepository {
                     StandardOpenOption.TRUNCATE_EXISTING
             );
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write restaurant data", exception);
+            throw new IllegalStateException("No se pudieron leer los datos del restaurante", exception);
         }
     }
 
-    // Un documento válido pero incompleto se completa con listas vacías para evitar nulls en los Services.
+    // Completa los datos con listas vacías para evitar nulls en los Services.
     private RestaurantData normalize(RestaurantData data) {
         if (data == null) {
             return new RestaurantData();

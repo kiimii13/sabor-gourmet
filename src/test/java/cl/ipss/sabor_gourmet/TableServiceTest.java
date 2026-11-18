@@ -9,7 +9,7 @@ import cl.ipss.sabor_gourmet.model.Customer;
 import cl.ipss.sabor_gourmet.model.Reservation;
 import cl.ipss.sabor_gourmet.model.RestaurantData;
 import cl.ipss.sabor_gourmet.model.Table;
-import cl.ipss.sabor_gourmet.model.TableRequest;
+import cl.ipss.sabor_gourmet.dto.TableRequest;
 import cl.ipss.sabor_gourmet.repository.RestaurantJsonRepository;
 import cl.ipss.sabor_gourmet.service.TableService;
 

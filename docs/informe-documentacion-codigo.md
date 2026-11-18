@@ -229,11 +229,11 @@ Todas las rutas siguientes son relativas a la raíz del proyecto, es decir, la c
 | Ruta exacta | Responsabilidad | Métodos o elementos para revisar |
 |---|---|---|
 | `src/main/java/cl/ipss/sabor_gourmet/model/Customer.java` | Representa un cliente persistido. | Componentes del record: `id`, `name`, `email`, `phone`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/CustomerRequest.java` | Entrada para crear o actualizar clientes. | Anotaciones `@NotBlank` y `@Email`. |
+| `src/main/java/cl/ipss/sabor_gourmet/dto/CustomerRequest.java` | Entrada para crear o actualizar clientes. | Anotaciones `@NotBlank` y `@Email`. |
 | `src/main/java/cl/ipss/sabor_gourmet/model/Table.java` | Representa la configuración de una mesa. | `id`, `number`, `capacity`, `available`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/TableRequest.java` | Entrada para mesas. | `@NotNull` en `number`, `capacity` y `available`; `@Min(1)` solo en `number` y `capacity`. |
+| `src/main/java/cl/ipss/sabor_gourmet/dto/TableRequest.java` | Entrada para mesas. | `@NotNull` en `number`, `capacity` y `available`; `@Min(1)` solo en `number` y `capacity`. |
 | `src/main/java/cl/ipss/sabor_gourmet/model/Reservation.java` | Representa una reserva persistida. | `customerId`, `tableId`, `startTime`, `people`, `status`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/ReservationRequest.java` | Entrada para crear o modificar reservas. | `customerId`, `tableId`, `startTime`, `people`; no existe `endTime`. |
+| `src/main/java/cl/ipss/sabor_gourmet/dto/ReservationRequest.java` | Entrada para crear o modificar reservas. | `customerId`, `tableId`, `startTime`, `people`; no existe `endTime`. |
 | `src/main/java/cl/ipss/sabor_gourmet/model/RestaurantData.java` | Contenedor del documento JSON completo. | `getCustomers`, `getTables`, `getReservations`, setters y constructor. |
 
 ### 5.3 Controllers

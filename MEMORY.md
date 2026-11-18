@@ -82,6 +82,7 @@ No existe en el enunciado una regla de unicidad para `Customer.email` ni `Table.
 
 - Configuración: `pom.xml`, `src/main/resources/application.properties`.
 - Arranque: `src/main/java/cl/ipss/sabor_gourmet/SaborGourmetApplication.java`.
+- Entrada HTTP: `src/main/java/cl/ipss/sabor_gourmet/dto/`.
 - Control HTTP: `src/main/java/cl/ipss/sabor_gourmet/controller/`.
 - Reglas: `src/main/java/cl/ipss/sabor_gourmet/service/`.
 - Persistencia: `src/main/java/cl/ipss/sabor_gourmet/repository/RestaurantJsonRepository.java`.

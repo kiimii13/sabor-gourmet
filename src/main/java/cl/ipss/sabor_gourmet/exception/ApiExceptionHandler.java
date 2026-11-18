@@ -8,30 +8,30 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * Traduce excepciones de validación y negocio a respuestas HTTP JSON coherentes.
+ * Traduce excepciones de validación y negocio a respuestas HTTP JSON.
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    // Jakarta Validation informa los errores básicos de los cuerpos recibidos.
+    // Responde 400 cuando el cuerpo no cumple las reglas de @Valid.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException exception) {
-        return ResponseEntity.badRequest().body(new ApiError("Request validation failed"));
+        return ResponseEntity.badRequest().body(new ApiError("Los datos enviados no son válidos"));
     }
 
-    // Fechas, horas y cuerpos JSON inválidos se responden como 400 Bad Request.
+    // Responde 400 cuando el JSON no es válido.
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<ApiError> handleBadRequest(RuntimeException exception) {
         return ResponseEntity.badRequest().body(new ApiError(exception.getMessage()));
     }
 
-    // Un ID inexistente se transforma en 404 Not Found.
+    // Responde 404 cuando el recurso no existe.
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(exception.getMessage()));
     }
 
-    // Los conflictos de capacidad, límite o solapamiento se exponen como 409 Conflict.
+    // Responde 409 cuando hay un conflicto.
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflict(ConflictException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(exception.getMessage()));

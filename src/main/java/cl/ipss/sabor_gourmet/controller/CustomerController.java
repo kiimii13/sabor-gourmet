@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import cl.ipss.sabor_gourmet.model.Customer;
-import cl.ipss.sabor_gourmet.model.CustomerRequest;
+import cl.ipss.sabor_gourmet.dto.CustomerRequest;
 import cl.ipss.sabor_gourmet.service.CustomerService;
 
 import java.net.URI;
 import java.util.List;
 
 /**
- * Expone las operaciones HTTP de clientes y delega las reglas al Service.
+ * Expone las operaciones HTTP de clientes
  */
 @RestController
 @RequestMapping("/customers")
@@ -30,24 +30,26 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    // El listado se construye desde la colección customers del JSON.
+    // Obtiene todos los clientes
     @GetMapping
     public ResponseEntity<List<Customer>> getCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());
     }
 
+    // Obtiene un cliente por su ID
     @GetMapping("/{id}")
     public ResponseEntity<Customer> getCustomer(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
-    // La validación del cuerpo ocurre antes de crear el cliente y se devuelve su URI.
+    // Crea un nuevo cliente
     @PostMapping
     public ResponseEntity<Customer> createCustomer(@Valid @RequestBody CustomerRequest request) {
         Customer customer = customerService.createCustomer(request);
         return ResponseEntity.created(URI.create("/customers/" + customer.id())).body(customer);
     }
 
+    // Actualiza un cliente existente
     @PutMapping("/{id}")
     public ResponseEntity<Customer> updateCustomer(
             @PathVariable Long id,
@@ -56,6 +58,7 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.updateCustomer(id, request));
     }
 
+    // Elimina un cliente existente
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);

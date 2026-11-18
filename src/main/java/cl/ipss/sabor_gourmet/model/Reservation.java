@@ -1,8 +1,7 @@
 package cl.ipss.sabor_gourmet.model;
 
 /**
- * Reserva persistida. Sus IDs mantienen la relación con un cliente y una mesa;
- * el término del turno se calcula, no se almacena.
+ * Modelo de reserva
  */
 public record Reservation(
         Long id,

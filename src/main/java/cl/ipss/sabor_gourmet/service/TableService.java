@@ -5,7 +5,7 @@ import cl.ipss.sabor_gourmet.exception.ConflictException;
 import cl.ipss.sabor_gourmet.exception.ResourceNotFoundException;
 import cl.ipss.sabor_gourmet.model.Reservation;
 import cl.ipss.sabor_gourmet.model.Table;
-import cl.ipss.sabor_gourmet.model.TableRequest;
+import cl.ipss.sabor_gourmet.dto.TableRequest;
 import cl.ipss.sabor_gourmet.repository.RestaurantJsonRepository;
 
 import java.util.List;
