@@ -1,99 +1,70 @@
 package cl.ipss.sabor_gourmet.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import cl.ipss.sabor_gourmet.exception.ConflictException;
 import cl.ipss.sabor_gourmet.exception.ResourceNotFoundException;
 import cl.ipss.sabor_gourmet.model.Customer;
 import cl.ipss.sabor_gourmet.dto.CustomerRequest;
-import cl.ipss.sabor_gourmet.repository.RestaurantJsonRepository;
+import cl.ipss.sabor_gourmet.repository.CustomerRepository;
+import cl.ipss.sabor_gourmet.repository.ReservationRepository;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
- * Servicio para los clientes
+ * Servicio para los clientes respaldado por Spring Data JPA.
  */
 @Service
+@Transactional
 public class CustomerService {
 
-    private final RestaurantJsonRepository repository;
+    private final CustomerRepository customerRepository;
+    private final ReservationRepository reservationRepository;
 
-    public CustomerService(RestaurantJsonRepository repository) {
-        this.repository = repository;
+    public CustomerService(CustomerRepository customerRepository, ReservationRepository reservationRepository) {
+        this.customerRepository = customerRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     // Obtiene todos los clientes
+    @Transactional(readOnly = true)
     public List<Customer> getAllCustomers() {
-        return repository.read().getCustomers();
+        return customerRepository.findAll();
     }
 
     // Obtiene un cliente por su ID
+    @Transactional(readOnly = true)
     public Customer getCustomer(Long id) {
-        return repository.read().getCustomers().stream()
-                .filter(customer -> Objects.equals(customer.id(), id))
-                .findFirst()
+        return customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado: " + id));
     }
 
     // Crea un nuevo cliente
     public Customer createCustomer(CustomerRequest request) {
-        return repository.update(data -> {
-            Customer customer = new Customer(
-                    nextId(data.getCustomers()),
-                    request.name().trim(),
-                    request.email().trim(),
-                    request.phone().trim()
-            );
-            data.getCustomers().add(customer);
-            return customer;
-        });
+        Customer customer = new Customer(
+                null,
+                request.name().trim(),
+                request.email().trim(),
+                request.phone().trim()
+        );
+        return customerRepository.save(customer);
     }
 
     // Actualiza un cliente existente
     public Customer updateCustomer(Long id, CustomerRequest request) {
-        return repository.update(data -> {
-            int index = indexOf(data.getCustomers(), id);
-            Customer updated = new Customer(
-                    id,
-                    request.name().trim(),
-                    request.email().trim(),
-                    request.phone().trim()
-            );
-            data.getCustomers().set(index, updated);
-            return updated;
-        });
+        Customer customer = getCustomer(id);
+        customer.setName(request.name().trim());
+        customer.setEmail(request.email().trim());
+        customer.setPhone(request.phone().trim());
+        return customerRepository.save(customer);
     }
 
     // Elimina un cliente existente
     public void deleteCustomer(Long id) {
-        repository.update(data -> {
-            int index = indexOf(data.getCustomers(), id);
-            boolean referenced = data.getReservations().stream()
-                    .anyMatch(reservation -> Objects.equals(reservation.customerId(), id));
-            if (referenced) {
-                throw new ConflictException("Cliente referenciado por una reserva: " + id);
-            }
-            data.getCustomers().remove(index);
-            return null;
-        });
-    }
-
-    // Obtiene el índice de un cliente por su ID
-    private int indexOf(List<Customer> customers, Long id) {
-        for (int index = 0; index < customers.size(); index++) {
-            if (Objects.equals(customers.get(index).id(), id)) {
-                return index;
-            }
+        Customer customer = getCustomer(id);
+        if (reservationRepository.existsByCustomerId(id)) {
+            throw new ConflictException("Cliente referenciado por una reserva: " + id);
         }
-        throw new ResourceNotFoundException("Cliente no encontrado: " + id);
-    }
-
-    // Obtiene el siguiente ID disponible para un cliente
-    private Long nextId(List<Customer> customers) {
-        return customers.stream()
-                .map(Customer::id)
-                .filter(Objects::nonNull)
-                .max(Long::compareTo)
-                .orElse(0L) + 1;
+        customerRepository.delete(customer);
     }
 }

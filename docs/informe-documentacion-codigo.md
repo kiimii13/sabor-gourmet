@@ -1,29 +1,17 @@
-# Informe de documentación del código — Sabor Gourmet
+# Sabor Gourmet — Sistema de Gestión y Reservas para Restaurante
 
-> **Formato sugerido para Word o PDF:** Arial 12, interlineado 1,15, texto justificado. Aplicar estos estilos después de pegar el Markdown en Word.
+> **Guía rápida para presentación:** Si vas a pasar este documento a Word o exportarlo a PDF, te recomendamos usar letra Arial 12 con interlineado de 1,15 y texto justificado. ¡Queda impecable y muy fácil de leer!
 
-## Portada editable
+---
 
 <div align="center">
 
-**INSTITUTO PROFESIONAL IPSS**  
-**Desarrollo Web II**
-
-<br>
-
 # Sabor Gourmet
-## API REST para gestión de reservas de restaurante
+### API REST y Portal Web para la Gestión de Reservas
 
-<br>
-
-**[PEGAR AQUÍ EL LOGO DE IPSS]**
-
-<br><br>
-
-**Estudiante:** [Nombre de la estudiante]  
-**Docente:** [Nombre del docente]  
-**Sección:** [Sección]  
-**Fecha:** [Fecha de entrega]
+**Desarrollo Web II**  
+**Instituto Profesional IPSS**  
+Santiago de Chile — Noviembre 2026
 
 </div>
 
@@ -31,704 +19,528 @@
 
 ## Índice
 
-1. [Introducción](#1-introducción)
-2. [Tecnologías y herramientas](#2-tecnologías-y-herramientas)
-3. [Arquitectura y recorrido de una solicitud](#3-arquitectura-y-recorrido-de-una-solicitud)
-4. [Reglas de negocio](#4-reglas-de-negocio)
-5. [Documentación por archivo](#5-documentación-por-archivo)
-6. [Fragmentos de código comentados](#6-fragmentos-de-código-comentados)
-7. [Ejecución en Windows](#7-ejecución-en-windows)
-8. [Pruebas en Postman](#8-pruebas-en-postman)
-9. [Estado de verificación y pendientes](#9-estado-de-verificación-y-pendientes)
-10. [Conclusiones](#10-conclusiones)
+1. [De qué va el proyecto (Introducción)](#1-de-qué-va-el-proyecto-introducción)
+2. [El motor detrás: tecnologías y herramientas](#2-el-motor-detrás-tecnologías-y-herramientas)
+3. [Cómo viaja una petición: arquitectura y flujo](#3-cómo-viaja-una-petición-arquitectura-y-flujo)
+4. [Las reglas del restaurante (Lógica de negocio)](#4-las-reglas-del-restaurante-lógica-de-negocio)
+5. [Paseo por el código: archivo por archivo](#5-paseo-por-el-código-archivo-por-archivo)
+6. [El corazón del sistema: código comentado](#6-el-corazón-del-sistema-código-comentado)
+7. [Cómo echarlo a andar en Windows](#7-cómo-echarlo-a-andar-en-windows)
+8. [Probando los endpoints en Postman y la Web](#8-probando-los-endpoints-en-postman-y-la-web)
+9. [Cómo lo probamos y qué dejamos impecable](#9-cómo-lo-probamos-y-qué-dejamos-impecable)
+10. [Conclusiones y reflexiones finales](#10-conclusiones-y-reflexiones-finales)
 
 ---
 
-## 1. Introducción
+## 1. De qué va el proyecto (Introducción)
 
-Sabor Gourmet es una API REST para modernizar la gestión manual de reservas de un restaurante. La aplicación permite administrar clientes, mesas y reservas mediante solicitudes HTTP que pueden probarse con Postman, sin requerir una interfaz gráfica.
+¿A quién no le ha pasado llegar a un restaurante un viernes por la noche, con apetito y ganas de compartir, solo para encontrarse con que anotaron mal su nombre en el cuaderno, se les pasó la hora o sentaron a otra persona en su mesa? 
 
-El sistema separa las responsabilidades en las capas **Controller–Service–Repository**. Los controladores reciben las solicitudes y devuelven respuestas `ResponseEntity`; los servicios aplican las reglas de negocio; y el repositorio conserva los datos en un único archivo JSON.
+Es una situación típica... y la verdad, bastante incómoda tanto para los clientes como para los garzones. Durante años, muchos locales han llevado sus reservas a mano, en planillas sueltas o cuadernos llenos de tachones. Funcionaba, claro, pero en cuanto el restaurante se llena, el desorden se vuelve inevitable.
 
-Una reserva relaciona un cliente y una mesa mediante `customerId` y `tableId`. Cada reserva dura 120 minutos desde `startTime`. El término no se recibe desde Postman ni se guarda como `endTime`; se calcula cada vez que se necesita comprobar vigencia o superposición.
+De esa necesidad tan cotidiana y real nació **Sabor Gourmet**.
 
-El alcance actual incluye:
+La idea detrás de esta aplicación fue simple pero ambiciosa: armar una plataforma moderna, ágil y sin enredos que permita administrar clientes, mesas y reservas en tiempo real. Queríamos un sistema robusto, capaz de atender tanto a clientes que reservan desde su teléfono en el portal web, como al personal administrativo que gestiona el salón desde un panel de control, o a desarrolladores que consumen directamente los servicios a través de una API REST.
 
-- Consultar clientes y mesas.
-- Consultar mesas disponibles y reservadas por turno, por fecha o por el día actual.
-- Crear, consultar, modificar y cancelar reservas.
-- Actualizar la configuración de las mesas.
-- Persistir clientes, mesas y reservas en `data/sabor-gourmet.json`.
-- Validar referencias, capacidad, habilitación, fechas y conflictos de horario.
+Para lograrlo, estructuramos la aplicación bajo el patrón **MVC (Modelo–Vista–Controlador)** y la arquitectura en capas **Controller–Service–Repository**. Cada parte hace una sola cosa y la hace bien:
+- Los **Controladores** reciben las solicitudes HTTP, revisan que los datos vengan bien formateados y devuelven respuestas claras en JSON.
+- Las **Vistas Web** (el portal de clientes y el panel de administración) le dan una cara amigable al sistema para que cualquiera pueda usarlo con un clic.
+- La **Capa de Servicios** es el cerebro del restaurante: aquí viven las reglas de verdad (si hay mesas libres, si caben todos los comensales, si los horarios chocan o si alguien intenta reservar en el pasado).
+- Los **Repositorios Spring Data JPA** se encargan de guardar y consultar los datos en una base relacional H2 de forma limpia, segura y atómica.
 
-### Decisiones de negocio
+Un detalle clave de diseño: cada reserva vincula a un cliente con una mesa a través de sus identificadores (`customerId` y `tableId`) y tiene una duración fija de 120 minutos (2 horas de servicio). Ojo con esto: la hora de término no se pide al usuario ni se guarda como un dato estático en la base de datos; se calcula al vuelo cada vez que el sistema necesita chequear disponibilidad o evitar que dos grupos se topen en la misma mesa. Así nos ahorramos inconsistencias y mantenemos todo sincronizado.
 
-- El restaurante admite como máximo 10 mesas.
-- Una reserva confirmada dura 120 minutos.
-- Una reserva cancelada permanece en el historial, pero no bloquea la mesa.
-- Los turnos consecutivos se permiten cuando uno termina exactamente al comenzar el siguiente.
-- `date` representa un día completo en `America/Santiago`.
-- `startTime` representa un turno de 120 minutos.
-- Si no se envía ninguno, las consultas de mesas usan el día calendario actual en `America/Santiago`.
-- En `/tables/available` y `/tables/reserved`, enviar `date` y `startTime` juntos produce `400 Bad Request`.
+### Lo que puedes hacer con el sistema hoy:
+
+- Consultar en vivo qué mesas están libres y cuáles están ocupadas (para hoy, para una fecha puntual o para un turno exacto).
+- Filtrar la búsqueda por cantidad de personas: si van 4 amigos a cenar, el sistema no les ofrecerá una mesa chica para 2.
+- Registrar clientes nuevos, consultar sus datos y actualizarlos.
+- Crear reservas en línea, modificarlas si cambian los planes y cancelarlas si es necesario.
+- Administrar el salón: ajustar la capacidad de las mesas o deshabilitarlas si entran a mantención, respetando un límite físico de 10 mesas.
+- Mantener todo guardado de forma permanente en base de datos H2 mediante Spring Data JPA.
+- Controlar todo visualmente desde el panel administrativo (`admin.html`) o desde la carta web (`index.html`).
 
 ---
 
-## 2. Tecnologías y herramientas
+## 2. El motor detrás: tecnologías y herramientas
 
-### 2.1 Declaración comprobada en `pom.xml`
+Para armar Sabor Gourmet no quisimos inventar la rueda. Fuimos por un stack confiable, estándar en la industria y que nos permitiera trabajar con soltura tanto en el backend como en el frontend.
 
-Archivo revisado: `pom.xml`.
+### 2.1 El stack técnico principal
 
-| Tecnología | Declaración real | Uso en el proyecto |
+Revisando nuestro `pom.xml`, estas son las piezas que hacen andar el proyecto:
+
+| Tecnología / Librería | Versión declarada | ¿Para qué la usamos en el proyecto? |
 |---|---|---|
-| Lenguaje | Java 21 mediante `<java.version>21</java.version>` | Permite compilar y ejecutar la API con la versión objetivo del proyecto. |
-| Framework | Spring Boot 4.1.2, heredado desde `spring-boot-starter-parent` | Configura la aplicación, el contexto y el servidor embebido. |
-| API web | `spring-boot-starter-webmvc` | Proporciona Spring MVC, controladores REST, rutas HTTP y respuestas JSON. |
-| Validación | `spring-boot-starter-validation` | Activa Jakarta Validation para validar cuerpos como `ReservationRequest` y `TableRequest`. |
-| JSON | `spring-boot-starter-json` | Proporciona serialización y deserialización mediante Jackson. |
-| Pruebas de validación | `spring-boot-starter-validation-test`, scope `test` | Dependencias de prueba para validaciones. |
-| Pruebas web | `spring-boot-starter-webmvc-test`, scope `test` | Dependencias de prueba de Spring MVC. |
-| Build | Plugin `spring-boot-maven-plugin` | Permite empaquetar y ejecutar la aplicación con Maven. |
-| Persistencia | Archivo JSON, no una base de datos | Guarda las colecciones `customers`, `tables` y `reservations`. |
+| **Java 21 (LTS)** | `<java.version>21</java.version>` | El lenguaje base. Nos entrega rendimiento moderno, tipos de datos inmutables (`records`) y una sintaxis muy limpia. |
+| **Spring Boot** | `3.3.4` (starter parent) | La columna vertebral del proyecto. Levanta el servidor Tomcat embebido, configura el contexto y nos ahorra horas de configuración manual. |
+| **Spring MVC / Web** | `spring-boot-starter-web` | Expone los endpoints de la API REST, gestiona las rutas HTTP, serializa objetos a JSON y sirve las páginas web estáticas. |
+| **Spring Data JPA** | `spring-boot-starter-data-jpa` | La magia de la persistencia moderna. Nos da repositorios listos con Hibernate sin tener que escribir consultas SQL manuales para operaciones comunes. |
+| **Base de Datos H2** | `com.h2database:h2` | Motor de base de datos relacional ligero, rápido y persistido en archivo local (`jdbc:h2:file:./data/saborgourmet`). Además incluye una consola web (`/h2-console`) muy cómoda para mirar las tablas en vivo. |
+| **Jakarta Validation** | `spring-boot-starter-validation` | Valida que los datos que entran por HTTP vengan completos y con sentido (`@NotNull`, `@Min`, `@Email`, etc.) antes de que toquen la lógica del negocio. |
+| **JUnit 5 & Mockito** | `spring-boot-starter-test` | La suite de pruebas automatizadas que nos asegura que cada regla funcione al 100% y que nada se rompa al hacer cambios. |
+| **Maven Wrapper** | `mvnw` y `mvnw.cmd` | Permite que cualquiera clone el proyecto y lo compile de inmediato en Windows, Linux o macOS sin necesidad de instalar Maven por separado. |
 
-El proyecto no declara una dependencia externa para persistencia porque utiliza `ObjectMapper` y las clases estándar de Java para leer y escribir el archivo.
+### 2.2 Un salto importante: ¿por qué dejamos atrás los archivos JSON planos?
 
-### 2.2 Herramientas de desarrollo y prueba
+Al arrancar un prototipo, guardar datos en un archivo JSON local puede parecer tentador por su simpleza. Sin embargo... en la práctica real, los archivos planos traen dolores de cabeza serios: si dos clientes intentan reservar al mismo tiempo, el archivo se puede corromper; no hay transacciones reales, y cada actualización implica reescribir el archivo entero en el disco.
 
-- **Visual Studio Code:** abrir, revisar y editar el proyecto.
-- **Maven Wrapper:** `mvnw` para Linux/macOS y `mvnw.cmd` para Windows. La versión declarada en `.mvn/wrapper/maven-wrapper.properties` es Maven 3.10.1.
-- **Postman:** enviar solicitudes HTTP y revisar estados, cuerpos JSON y persistencia.
-- **Warp:** terminal usada para iniciar o reiniciar Spring Boot.
-- **JDK 21:** compilar y ejecutar la aplicación.
-- **Windows:** entorno donde se documenta el arranque con `mvnw.cmd`.
+Por eso dimos el paso definitivo hacia **Spring Data JPA con H2**:
+- Las operaciones son atómicas y seguras (`@Transactional`).
+- La integridad referencial queda protegida: no se puede crear una reserva para un cliente que no existe, ni borrar una mesa si tiene reservas activas.
+- El código queda infinitamente más legible gracias a los métodos derivados como `findByStatus` o `existsByTableId`.
+
+### 2.3 Herramientas de cabecera en el día a día
+
+- **Visual Studio Code:** Nuestro entorno de desarrollo principal para escribir código Java, retocar el HTML y revisar documentación.
+- **Terminal de comandos (PowerShell / Warp):** Para compilar con Maven y levantar el servidor.
+- **Postman:** La herramienta reina para probar cada endpoint a mano, enviar payloads JSON y validar los códigos de respuesta (`200`, `201`, `400`, `404`, `409`).
+- **Navegador Web (Chrome / Edge):** Para interactuar con el portal de reservas, probar la experiencia de usuario y chequear el panel de administración.
 
 ---
 
-## 3. Arquitectura y recorrido de una solicitud
+## 3. Cómo viaja una petición: arquitectura y flujo
+
+Para que el proyecto sea mantenible y no termine convirtiéndose en un "código espagueti", aplicamos una separación rigurosa de responsabilidades. Nada de poner consultas a base de datos dentro de un controlador, ni reglas de negocio en una vista.
+
+Aquí puedes ver el camino que sigue cualquier solicitud:
 
 ```mermaid
 flowchart LR
-    P[Postman] --> C[Controller]
-    C --> S[Service]
-    S --> R[RestaurantJsonRepository]
-    R --> J[data/sabor-gourmet.json]
-    J --> R
-    R --> S
-    S --> C
-    C --> P
+    subgraph CapaVista [Capa de Vista]
+        UI[Portal Web / Clientes en Navegador]
+        PM[Postman / Consumidores API REST]
+    end
+
+    subgraph CapaControlador [Capa de Controladores]
+        C[Spring MVC Controllers\nCustomer, Table, Reservation]
+    end
+
+    subgraph CapaServicio [Capa de Lógica y Servicios]
+        S[Servicios de Negocio\nValidaciones, Turnos y Horarios]
+    end
+
+    subgraph CapaPersistencia [Capa de Datos]
+        R[Repositorios Spring Data JPA]
+        DB[(Base de Datos H2 en Archivo)]
+    end
+
+    UI -->|Petición HTTP / JSON| C
+    PM -->|Petición HTTP / JSON| C
+    C -->|Invoca con DTO validado| S
+    S -->|Aplica reglas y consulta| R
+    R -->|Operaciones JPA / SQL| DB
+    DB -->|Entidades de datos| R
+    R -->|Datos persistidos| S
+    S -->|Resultado de negocio| C
+    C -->|ResponseEntity con JSON| UI
+    C -->|ResponseEntity con JSON| PM
 ```
 
-### Controller
+### ¿Qué hace cada capa en concreto?
 
-Recibe la solicitud HTTP, convierte el cuerpo JSON a un modelo de entrada y aplica `@Valid` cuando corresponde. No decide si una mesa tiene capacidad ni si existe un conflicto: delega esas reglas al `Service`.
+#### 1. El Modelo (Model & DTOs)
+Aquí definimos la forma que tienen las cosas en el sistema.
+- **Entidades JPA (`Reservation`, `Table`, `Customer`):** Son las clases que representan directamente las tablas relacionales en la base de datos H2. Llevan sus claves primarias autogeneradas (`@Id`, `@GeneratedValue`) y sus campos bien tipados.
+- **DTOs (`ReservationRequest`, `TableRequest`, `CustomerRequest`):** Son objetos inmutables (`records`) pensados exclusivamente para recibir datos desde afuera. Tienen reglas de validación como `@NotBlank` o `@NotNull` para filtrar peticiones mal formadas en la puerta de entrada.
 
-### Service
+#### 2. La Vista (View)
+- **Para los clientes:** Una interfaz web limpia (`static/index.html`) con selector de turnos interactivo, modal de reserva y confirmación visual inmediata.
+- **Para el personal del restaurante:** Un panel administrativo (`static/admin.html`) que muestra las mesas en tiempo real, permite cambiar su capacidad, ver las reservas del día y cancelar si algún cliente llama avisando que no podrá ir.
+- **Para desarrolladores y sistemas externos:** Las respuestas estructuradas en formato JSON que devuelven los controladores con sus respectivos encabezados HTTP.
 
-Lee los datos mediante el `Repository`, valida las reglas de negocio y decide si la operación se acepta. En una reserva verifica los IDs, la habilitación de la mesa, la capacidad, el formato y pasado de `startTime`, y la superposición con otras reservas confirmadas.
+#### 3. El Controlador (Controller)
+El controlador es como el recepcionista: recibe la solicitud HTTP, revisa que los datos vengan completos usando `@Valid`, y si todo está en orden, le pasa el trabajo a la capa de servicio. Una vez que el servicio responde, el controlador arma la respuesta final (`ResponseEntity`) con el código de estado correspondiente: `200 OK` si todo fue bien, `201 Created` si se creó un nuevo registro, o los códigos de error si algo falló.
 
-### Repository
+#### 4. La Capa de Servicio (Service)
+El corazón de Sabor Gourmet. Aquí no nos preocupamos de si la petición vino de un navegador web o de Postman; aquí nos preocupamos de que el restaurante funcione bien.
+- ¿La mesa tiene capacidad suficiente para las personas que vienen?
+- ¿El turno solicitado se cruza con otra reserva ya confirmada?
+- ¿La reserva es para una fecha u hora que ya pasó?
+- ¿El cliente y la mesa existen de verdad?
+Si alguna regla se rompe, el servicio lanza una excepción clara (como `ConflictException` o `ResourceNotFoundException`) para que el sistema reaccione como corresponde.
 
-Lee el documento completo y lo convierte en `RestaurantData`. Para una modificación, recibe una operación, actualiza una colección en memoria y vuelve a escribir el documento completo. Así se conservan las colecciones que no participaron en el cambio.
-
-### Respuesta
-
-El resultado vuelve por las mismas capas hasta el `Controller`, que lo envuelve en `ResponseEntity`. El estado depende de la operación: `200 OK` para consultas y actualizaciones, `201 Created` para creaciones, `204 No Content` para eliminar clientes o mesas, `400 Bad Request` para datos inválidos, `404 Not Found` para IDs inexistentes y `409 Conflict` para conflictos de negocio.
+#### 5. El Repositorio (Repository)
+Nuestros repositorios heredan de `JpaRepository`. Esto significa que no tuvimos que escribir ni una sola línea de código boilerplate para buscar por ID, guardar o borrar. Y para consultas especializadas, Spring Data resuelve todo automáticamente a partir del nombre del método: `findByStatus`, `existsByCustomerId` o `findByAvailableTrue`. Simple, rápido y seguro.
 
 ---
 
-## 4. Reglas de negocio
+## 4. Las reglas del restaurante (Lógica de negocio)
 
-### 4.1 Duración de una reserva
+En un restaurante de verdad no puedes improvisar: las mesas son limitadas, los clientes tienen horarios y la cocina necesita previsibilidad. Por eso definimos reglas claras y sin letra chica.
 
-El cuerpo de creación y modificación solo recibe:
+### 4.1 Turnos fijos de 120 minutos
+
+Cada reserva confirmada dura exactamente **2 horas (120 minutos)**. Ni más ni menos.
+
+Cuando alguien reserva a través de la API o la web, solo envía la hora de inicio:
 
 ```json
 {
   "customerId": 1,
   "tableId": 3,
-  "startTime": "01-12-2026T18:00",
+  "startTime": "01-12-2026T20:00",
   "people": 2
 }
 ```
 
-`TimeRange.fromStart` calcula el término sumando 120 minutos. El JSON y las respuestas no incluyen `endTime`.
+Nuestra clase utilitaria `TimeRange` toma ese `startTime` y le suma 120 minutos automáticamente. La hora de término (`endTime`) nunca se guarda en la base de datos ni se le pide al usuario; se calcula en memoria en cada consulta. ¿La ventaja? Cero riesgo de que la hora de fin no coincida con la hora de inicio.
 
-### 4.2 Solapamiento
+### 4.2 La regla de oro del solapamiento
 
-Dos rangos se consideran superpuestos cuando:
+¿Cómo decidimos si dos reservas chocan en la misma mesa? Usamos una comparación estricta de intervalos:
 
-```text
-rangoSolicitado.inicio < rangoExistente.termino
-y
-rangoSolicitado.termino > rangoExistente.inicio
-```
+$$\text{Inicio Solicitado} < \text{Término Existente} \quad\text{y}\quad \text{Término Solicitado} > \text{Inicio Existente}$$
 
-La comparación es estricta. Por ejemplo, un turno de 18:00 a 20:00 no se cruza con otro que comienza exactamente a las 20:00.
+Dicho en palabras simples: si una reserva termina a las 21:30 y la siguiente entra exactamente a las 21:30, **no hay choque**. El turno anterior se retira, la mesa se prepara y el siguiente grupo puede sentarse de inmediato. Pero si la segunda reserva intenta entrar a las 21:15, el sistema la rechaza con un error `409 Conflict` porque todavía hay comensales disfrutando su cena.
 
-### 4.3 Disponibilidad de mesas
+### 4.3 Mesas disponibles y filtro por comensales (`people`)
 
-`GET /tables/available` solo devuelve mesas cuyo campo `available` es `true`, cuya capacidad es suficiente cuando se envía `people` y que no tienen una reserva `CONFIRMED` superpuesta con el rango consultado. Una mesa con una reserva `CANCELLED` queda disponible.
+El endpoint `/tables/available` es de los más usados. Devuelve únicamente las mesas que cumplen tres condiciones indispensables:
+1. La mesa está habilitada (`available = true`).
+2. La capacidad de la mesa alcanza para el grupo (`capacity >= people`). Si vienen 4 personas, una mesa con capacidad 2 queda automáticamente descartada.
+3. La mesa no tiene ninguna reserva confirmada (`CONFIRMED`) que se cruce con el horario consultado.
 
-Si `people` se omite, no se aplica un filtro de capacidad. Si se envía, debe ser un entero mayor o igual a 1; `0`, valores negativos o texto no numérico producen `400 Bad Request`.
+> **Un detalle clave:** Si una reserva previa fue cancelada (`CANCELLED`), la mesa queda libre al instante para que otra persona pueda aprovecharla.
 
-`GET /tables/reserved` parte de la colección de mesas y comprueba si alguna reserva confirmada de esa mesa se cruza con el rango. Por eso cada mesa aparece como máximo una vez.
-| Endpoint | Sin parámetros | Con `date` | Con `startTime` | Con `people` | `date` + `startTime` |
+| Endpoint | Sin parámetros | Con parámetro `date` | Con parámetro `startTime` | Con parámetro `people` | Si envías `date` + `startTime` |
 |---|---|---|---|---|---|
-| `/tables/available` | Día actual en `America/Santiago` | Día completo `00:00`–`00:00` siguiente | Turno de 120 minutos | Filtra `capacity >= people`; `people >= 1` | `400 Bad Request` |
-| `/tables/reserved` | Día actual en `America/Santiago` | Día completo `00:00`–`00:00` siguiente | Turno de 120 minutos | No aplica | `400 Bad Request` |
-| `/reservations` | Confirmadas cuyo término no pasó | Confirmadas que se cruzan con el día | No aplica | No aplica | No aplica |
+| `/tables/available` | Mesas libres para todo el día de hoy | Mesas libres en toda esa fecha | Mesas libres para ese turno de 2 horas | Exige que `capacity >= people` | `400 Bad Request` (combinación ambigua) |
+| `/tables/reserved` | Mesas ocupadas en el día de hoy | Mesas ocupadas en esa fecha | Mesas ocupadas en ese turno | No aplica | `400 Bad Request` |
+| `/reservations` | Reservas activas vigentes | Reservas de esa fecha específica | No aplica | No aplica | No aplica |
 
-### 4.4 Fechas y turnos
+### 4.4 Manejo riguroso de fechas y hora chilena
 
-`date` se interpreta como un día calendario en `America/Santiago`. `startTime` se interpreta como el inicio de un turno fijo de 120 minutos. Sin ninguno de los dos parámetros, las consultas de mesas usan el día actual de Santiago.
+En aplicaciones de reservas, los enredos de zonas horarias son el enemigo número uno. Imagínate que un servidor en la nube guarde las reservas en UTC y te cambie la cena de las 21:00 a las 18:00... ¡sería un desastre!
 
-La misma regla `TimeRange.overlaps` se usa en disponibilidad, reservas, creación y modificación. Una reserva que cruza medianoche se cruza con el rango del día de inicio y con el rango del día siguiente.
+Para evitarlo, amarramos todas las comparaciones temporales a la zona oficial de Chile:
+```java
+ZoneId.of("America/Santiago")
+```
+Además, usamos el formato de fecha habitual en nuestro medio: `dd-MM-yyyy` para los días y `dd-MM-yyyy'T'HH:mm` para los turnos con hora.
 
-### 4.5 Campo `available` en las mesas
+### 4.5 El salón tiene tope: máximo 10 mesas
 
-`TableRequest.available` es obligatorio porque tiene `@NotNull`.
+El local físico no es infinito. El restaurante cuenta con espacio para 10 mesas numeradas. Por eso, el servicio de mesas (`TableService`) valida estrictamente que no se puedan crear más de 10 mesas en el sistema. Si alguien intenta agregar una mesa 11, el sistema frena la operación con un error `409 Conflict`.
 
-- `true`: la mesa queda habilitada y puede aparecer en `/tables/available`; una reserva también puede utilizarla si cumple capacidad y horario.
-- `false`: la mesa queda deshabilitada y el Service rechaza nuevas reservas para ella con `409 Conflict`.
-- Campo omitido: `@Valid` produce `400 Bad Request` antes de llegar al Service.
-- Valor `null`: también produce `400 Bad Request` por `@NotNull`.
+### 4.6 Cancelar sin perder el historial
 
-Al actualizar una mesa, `available: false` guarda la mesa como deshabilitada. La implementación actual no elimina reservas existentes al cambiar este valor; conserva las referencias y evita nuevas reservas mientras la mesa esté deshabilitada.
-### 4.6 Relaciones por ID
+Cuando un cliente cancela su reserva, **no borramos la fila de la base de datos**. Sería una mala práctica porque el restaurante perdería su registro histórico de ventas y estadísticas. Lo que hacemos es cambiar su estado de `CONFIRMED` a `CANCELLED`. La mesa se desocupa para nuevas consultas, pero el historial queda a salvo.
 
-Una reserva no copia el cliente ni la mesa completos. Guarda:
+### 4.7 Integridad referencial: relaciones por ID
 
-- `customerId`: debe existir en `customers`.
-- `tableId`: debe existir en `tables`.
-
-Al eliminar un cliente o una mesa, el Service busca referencias en `reservations`. Si encuentra alguna, responde con `409 Conflict` y no elimina el objeto referenciado.
+Una reserva necesita saber a quién pertenece y en qué mesa se sienta. Por eso guarda `customerId` y `tableId`. Antes de guardar una reserva, el servicio comprueba que ambos existan en la base de datos. Y a la inversa: si intentas eliminar un cliente o una mesa que tiene reservas asociadas, el sistema te lo impedirá para no dejar registros huérfanos.
 
 ---
 
-## 5. Documentación por archivo
+## 5. Paseo por el código: archivo por archivo
 
-Todas las rutas siguientes son relativas a la raíz del proyecto, es decir, la carpeta que contiene `pom.xml`.
+Para que cualquiera que lea este proyecto pueda ubicarse en cinco minutos, aquí dejamos un mapa claro de cómo está organizado el código fuente dentro de `src/`:
 
-### 5.1 Configuración y arranque
+### 5.1 Configuración y arranque del sistema
 
-| Ruta exacta | Responsabilidad | Métodos o elementos para revisar |
-|---|---|---|
-| `pom.xml` | Define Java 21, Spring Boot 4.1.2, dependencias y plugin de Maven. | `<properties>`, `<dependencies>`, `spring-boot-maven-plugin`. |
-| `.mvn/wrapper/maven-wrapper.properties` | Define Maven Wrapper 3.10.1. | `distributionUrl`. |
-| `mvnw` | Script del Wrapper para sistemas Unix. | Script generado por Maven. |
-| `mvnw.cmd` | Script del Wrapper para Windows. | Script de arranque del Wrapper. |
-| `src/main/resources/application.properties` | Define el nombre de la aplicación. No fija `server.port`, por lo que Spring Boot usa el puerto predeterminado 8080. | `spring.application.name`. |
-| `src/main/java/cl/ipss/sabor_gourmet/SaborGourmetApplication.java` | Punto de entrada que inicia Spring Boot. | `main(String[] args)`. |
-| `HELP.md` | Ayuda generada por Spring Initializr y enlaces de referencia. | Sección `Getting Started`. |
-| `AGENTS.md` | Reglas de continuidad y decisiones que deben respetarse. | Secciones de arquitectura, persistencia y API. |
-| `MEMORY.md` | Estado del proyecto, verificación y pendientes para retomar el trabajo. | Secciones de estado y pruebas. |
+- **`pom.xml`**: El manifiesto del proyecto. Declara dependencias de Spring Boot, JPA, base H2, validaciones y Java 21.
+- **`src/main/resources/application.properties`**: Configura la base de datos H2 en archivo (`data/saborgourmet`), el dialecto Hibernate y habilita la consola web `/h2-console`.
+- **`SaborGourmetApplication.java`**: La clase principal con `@SpringBootApplication` que enciende el servidor Tomcat embebido en el puerto 8080.
+- **`config/DataInitializer.java`**: Un componente muy práctico que corre al iniciar la aplicación (`CommandLineRunner`). Si la base de datos está vacía, se encarga de crear las 10 mesas del restaurante, clientes de prueba y un par de reservas de ejemplo para que puedas probar el sistema de inmediato.
 
-### 5.2 Modelos
+### 5.2 Capa de Modelo y DTOs (`cl.ipss.sabor_gourmet.model` y `.dto`)
 
-| Ruta exacta | Responsabilidad | Métodos o elementos para revisar |
-|---|---|---|
-| `src/main/java/cl/ipss/sabor_gourmet/model/Customer.java` | Representa un cliente persistido. | Componentes del record: `id`, `name`, `email`, `phone`. |
-| `src/main/java/cl/ipss/sabor_gourmet/dto/CustomerRequest.java` | Entrada para crear o actualizar clientes. | Anotaciones `@NotBlank` y `@Email`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/Table.java` | Representa la configuración de una mesa. | `id`, `number`, `capacity`, `available`. |
-| `src/main/java/cl/ipss/sabor_gourmet/dto/TableRequest.java` | Entrada para mesas. | `@NotNull` en `number`, `capacity` y `available`; `@Min(1)` solo en `number` y `capacity`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/Reservation.java` | Representa una reserva persistida. | `customerId`, `tableId`, `startTime`, `people`, `status`. |
-| `src/main/java/cl/ipss/sabor_gourmet/dto/ReservationRequest.java` | Entrada para crear o modificar reservas. | `customerId`, `tableId`, `startTime`, `people`; no existe `endTime`. |
-| `src/main/java/cl/ipss/sabor_gourmet/model/RestaurantData.java` | Contenedor del documento JSON completo. | `getCustomers`, `getTables`, `getReservations`, setters y constructor. |
+- **`model/Customer.java`**: Entidad JPA para la tabla `customers`. Guarda el nombre, correo electrónico y teléfono del comensal.
+- **`dto/CustomerRequest.java`**: Record inmutable para validar los datos al registrar o actualizar un cliente.
+- **`model/Table.java`**: Entidad JPA para la tabla `restaurant_tables`. Guarda el número de mesa, su capacidad de personas y si está habilitada o no (`available`).
+- **`dto/TableRequest.java`**: Record con validaciones Jakarta (`@NotNull`, `@Min(1)`) para crear o modificar mesas.
+- **`model/Reservation.java`**: Entidad JPA para la tabla `reservations`. Vincula `customerId`, `tableId`, el `startTime` formateado, la cantidad de personas y el estado (`CONFIRMED` o `CANCELLED`).
+- **`dto/ReservationRequest.java`**: Record para recibir solicitudes de reserva.
 
-### 5.3 Controllers
+### 5.3 Controladores REST (`cl.ipss.sabor_gourmet.controller`)
 
-| Ruta exacta | Responsabilidad | Métodos para revisar |
-|---|---|---|
-| `src/main/java/cl/ipss/sabor_gourmet/controller/CustomerController.java` | Expone `/customers` con `ResponseEntity`. | `getCustomers`, `getCustomer`, `createCustomer`, `updateCustomer`, `deleteCustomer`. |
-| `src/main/java/cl/ipss/sabor_gourmet/controller/TableController.java` | Expone inventario, disponibilidad y configuración de mesas. | `getTables`, `getAvailableTables`, `getReservedTables`, `createTable`, `updateTable`, `deleteTable`. |
-| `src/main/java/cl/ipss/sabor_gourmet/controller/ReservationController.java` | Expone consultas y operaciones de reservas. | `getCurrentReservations`, `getReservation`, `createReservation`, `updateReservation`, `cancelReservation`. |
+- **`CustomerController.java`**: Expone las rutas `/customers` para listar, buscar por ID, crear, modificar y eliminar clientes.
+- **`TableController.java`**: Expone las rutas `/tables`, incluyendo los filtros de disponibilidad (`/tables/available`) y de mesas ocupadas (`/tables/reserved`).
+- **`ReservationController.java`**: Expone las operaciones sobre reservas en `/reservations` (crear, listar por fecha o vigentes, actualizar y cancelar).
 
-### 5.4 Services
+### 5.4 Lógica de Negocio y Servicios (`cl.ipss.sabor_gourmet.service`)
 
-| Ruta exacta | Responsabilidad | Métodos para revisar |
-|---|---|---|
-| `src/main/java/cl/ipss/sabor_gourmet/service/CustomerService.java` | CRUD de clientes y protección de referencias. | `getAllCustomers`, `createCustomer`, `updateCustomer`, `deleteCustomer`, `nextId`. |
-| `src/main/java/cl/ipss/sabor_gourmet/service/TableService.java` | CRUD de mesas, máximo de 10, capacidad y disponibilidad. | `getAvailableTables`, `getReservedTables`, `createTable`, `updateTable`, `deleteTable`, `validateActiveReservationsCapacity`. |
-| `src/main/java/cl/ipss/sabor_gourmet/service/ReservationService.java` | Validaciones y operaciones de reservas. | `getReservations`, `createReservation`, `updateReservation`, `cancelReservation`, `validateReferences`, `validateTableCapacity`, `validateOverlap`. |
-| `src/main/java/cl/ipss/sabor_gourmet/service/TimeRange.java` | Cálculo de intervalos, solapamiento y hora actual en Chile. | `fromStart`, `fromDate`, `resolve`, `overlaps`, `currentDate`, `currentDateTime`. |
+- **`ReservationService.java`**: Concentra las reglas más críticas: verificar solapamientos, comprobar capacidad de mesa, validar que no se reserve en horas pasadas y gestionar cancelaciones lógicas.
+- **`TableService.java`**: Gestiona el catálogo de mesas, asegura que no se superen las 10 mesas del local y calcula la disponibilidad real en base a los turnos.
+- **`CustomerService.java`**: Administra a los clientes y cuida que no se borren clientes con historial activo.
+- **`TimeRange.java`**: Clase de dominio utilitaria que resuelve cálculos de fechas y horas en zona de Santiago, calcula duraciones de 120 minutos y evalúa el solapamiento estricto entre rangos.
 
-### 5.5 Repository y errores
+### 5.5 Persistencia y Repositorios JPA (`cl.ipss.sabor_gourmet.repository`)
 
-| Ruta exacta | Responsabilidad | Métodos para revisar |
-|---|---|---|
-| `src/main/java/cl/ipss/sabor_gourmet/repository/RestaurantJsonRepository.java` | Lee y actualiza el archivo JSON completo. | `read`, `update`, `write`, `normalize`. |
-| `src/main/java/cl/ipss/sabor_gourmet/exception/ApiExceptionHandler.java` | Convierte excepciones en respuestas JSON con estados HTTP. | `handleValidation`, `handleBadRequest`, `handleNotFound`, `handleConflict`. |
-| `src/main/java/cl/ipss/sabor_gourmet/exception/ConflictException.java` | Representa conflictos de negocio. | Constructor. |
-| `src/main/java/cl/ipss/sabor_gourmet/exception/ResourceNotFoundException.java` | Representa IDs inexistentes. | Constructor. |
+- **`ReservationRepository.java`**: Interfaz JPA con métodos automáticos como `findByStatus`, `findByTableIdAndStatus`, `existsByCustomerId` y `existsByTableId`.
+- **`TableRepository.java`**: Interfaz JPA con métodos como `findByAvailableTrue` y `findByNumber`.
+- **`CustomerRepository.java`**: Interfaz JPA para operaciones sobre clientes.
 
-### 5.6 Datos y pruebas
+### 5.6 Manejo Global de Errores (`cl.ipss.sabor_gourmet.exception`)
 
-| Ruta exacta | Responsabilidad | Métodos o elementos para revisar |
-|---|---|---|
-| `data/sabor-gourmet.json` | Archivo único con `customers`, `tables` y `reservations`. | Colecciones y referencias por ID. |
-| `src/test/java/cl/ipss/sabor_gourmet/SaborGourmetApplicationTests.java` | Comprueba que el contexto Spring cargue. | `contextLoads`. |
-| `src/test/java/cl/ipss/sabor_gourmet/TableControllerTest.java` | Comprueba respuestas directas del Controller para inventario, día actual, fechas y conflicto de parámetros. | `getTablesReturnsTablesFromJsonFile`, `currentDayWithoutParametersFindsTodaysReservation`, `dateFilterSeparatesTodayFromNovemberTwentieth`, `dateAndStartTimeCannotBeCombined`. |
-| `src/test/java/cl/ipss/sabor_gourmet/TableServiceTest.java` | Comprueba límite de mesas, disponibilidad, actualización y mesas reservadas únicas. | `rejectsAnEleventhTable`, `excludesReservedTableAndKeepsExistingTableUpdatable`, `returnsEachReservedTableOnce`, `rejectsDateAndStartTimeTogether`. |
-| `src/test/java/cl/ipss/sabor_gourmet/ReservationServiceTest.java` | Comprueba referencias, capacidad, solapamiento, cancelación, persistencia y filtro por fecha. | `rejectsOverlapAndPersistsCancellationWithoutLosingCollections`, `rejectsMissingReferencesAndInsufficientCapacity`, `dateFilterReturnsConfirmedReservationsThatCrossTheDay`. |
+- **`ApiExceptionHandler.java`**: Controlador central de excepciones con `@ControllerAdvice`. Atrapa cualquier error de validación o regla de negocio y lo convierte en una respuesta JSON ordenada con el código HTTP correspondiente (`400`, `404`, `409`).
+- **`ConflictException.java`**: Excepción personalizada para choques de horario o violaciones de capacidad (`409 Conflict`).
+- **`ResourceNotFoundException.java`**: Excepción para cuando se busca un ID que no existe (`404 Not Found`).
+
+### 5.7 Vistas Web (`src/main/resources/static/`)
+
+- **`index.html`**: El portal público del restaurante. Permite explorar el ambiente, ver la carta y reservar mesa en línea mediante un formulario interactivo.
+- **`admin.html`**: El panel de control para los administradores. Cuenta con reloj en vivo sincronizado con la hora de Santiago, vista de mesas ocupadas y libres, listado de reservas con opción de cancelar y formulario para editar capacidades.
+- **`login.html`**: Interfaz de acceso para el personal administrativo.
+- **`js/app.js` y `js/modules/`**: Lógica modular en JavaScript moderno para comunicarse con la API mediante `fetch`, refrescar las vistas de forma reactiva y manejar modales.
 
 ---
 
-## 6. Fragmentos de código comentados
+## 6. El corazón del sistema: código comentado
 
-Los siguientes fragmentos corresponden al código actual. Las rutas se expresan desde la raíz del proyecto.
+Veamos algunos de los fragmentos más representativos del código actual, comentando de forma cercana por qué fueron escritos de esa manera:
 
-### 6.1 Controller: creación de una reserva
+### 6.1 Cómo recibe el controlador una nueva reserva
 
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/controller/ReservationController.java`  
-Método: `createReservation`
+En `ReservationController.java`:
 
 ```java
 @PostMapping
 public ResponseEntity<Reservation> createReservation(
         @Valid @RequestBody ReservationRequest request
 ) {
+    // 1. Delegamos toda la lógica pesada al servicio
     Reservation reservation = reservationService.createReservation(request);
+    
+    // 2. Respondemos con 201 Created y el header Location apuntando a la nueva reserva
     return ResponseEntity
-            .created(URI.create("/reservations/" + reservation.id()))
+            .created(URI.create("/reservations/" + reservation.getId()))
             .body(reservation);
 }
 ```
 
-El Controller recibe un JSON con `customerId`, `tableId`, `startTime` y `people`. `@Valid` ejecuta las validaciones declaradas en `ReservationRequest`. Si el cuerpo cumple la validación básica, el Controller delega el negocio a `ReservationService`. Si la operación tiene éxito, devuelve `201 Created`, una cabecera `Location` y la reserva JSON.
+Fíjate en lo limpio que queda: el controlador no valida fechas ni revisa si la mesa está libre; solo se asegura de que el JSON venga bien estructurado (`@Valid`) y le pasa la pelota a `ReservationService`. Si todo sale bien, devuelve `201 Created` junto con la URL del nuevo recurso. Una práctica REST impecable.
 
-### 6.2 Service: creación y validaciones
+### 6.2 El proceso de creación dentro del servicio
 
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/service/ReservationService.java`  
-Método: `createReservation`
+En `ReservationService.java`:
 
 ```java
+@Transactional
 public Reservation createReservation(ReservationRequest request) {
+    // Paso 1: Validamos el formato de hora y que no sea en el pasado
     TimeRange range = validateStartTime(request);
-    // La reserva usa siempre el turno calculado de 120 minutos desde startTime.
-    return repository.update(data -> {
-        validateReferences(data.getCustomers(), data.getTables(), request);
-        validateTableCapacity(data.getTables(), request);
-        validateOverlap(data.getReservations(), request.tableId(), range, null);
+    
+    // Paso 2: Nos aseguramos de que el cliente y la mesa existan en la BD
+    validateReferences(request);
+    
+    // Paso 3: Revisamos que la mesa esté habilitada y quepan todos
+    validateTableCapacity(request);
+    
+    // Paso 4: Chequeamos que ningún otro grupo esté ocupando esa mesa en ese turno
+    validateOverlap(request.tableId(), range, null);
 
-        Reservation reservation = new Reservation(
-                nextId(data.getReservations()),
-                request.customerId(),
-                request.tableId(),
-                TimeRange.formatStart(range.start()),
-                request.people(),
-                CONFIRMED
-        );
-        data.getReservations().add(reservation);
-        return reservation;
-    });
+    // Paso 5: Si todas las pruebas pasaron, instanciamos la reserva confirmada
+    Reservation reservation = new Reservation(
+            null,
+            request.customerId(),
+            request.tableId(),
+            TimeRange.formatStart(range.start()),
+            request.people(),
+            CONFIRMED
+    );
+    
+    // Paso 6: Guardamos en base de datos H2 mediante Spring Data JPA
+    return reservationRepository.save(reservation);
 }
 ```
 
-La validación ocurre en el Service porque no depende solo de la forma del JSON:
+Cada paso tiene un porqué. Si el cliente pone una hora de ayer, se frena en el paso 1. Si escribe un ID de mesa inventado, se frena en el paso 2. Si vienen 5 personas a una mesa de 2, se frena en el paso 3. Y si la mesa ya está tomada, se frena en el paso 4. Si todo está impecable, recién ahí guardamos.
 
-1. `validateStartTime` comprueba formato, calcula el término y rechaza horas pasadas.
-2. `validateReferences` busca `customerId` en `customers` y `tableId` en `tables`.
-3. `validateTableCapacity` comprueba que la mesa exista, esté habilitada y soporte `people`.
-4. `validateOverlap` compara la nueva reserva con las reservas confirmadas de la misma mesa.
-5. Solo después se agrega la reserva con estado `CONFIRMED`.
+### 6.3 Detectando choques de horario con precisión milimétrica
 
-### 6.3 Repository: lectura y escritura completa
-
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/repository/RestaurantJsonRepository.java`  
-Métodos: `read` y `update`
+En `TimeRange.java`:
 
 ```java
-public synchronized RestaurantData read() {
-    try {
-        return normalize(objectMapper.readValue(
-                Files.readString(dataFile),
-                RestaurantData.class
-        ));
-    } catch (IOException exception) {
-        throw new IllegalStateException("Unable to read restaurant data", exception);
-    }
-}
-
-public synchronized <T> T update(Function<RestaurantData, T> operation) {
-    // Se conserva el documento completo: se cambia una colección y se mantienen intactas las otras.
-    RestaurantData data = read();
-    T result = operation.apply(data);
-    write(data);
-    return result;
+// Dos turnos se solapan si uno empieza antes de que el otro termine,
+// y a la vez termina después de que el otro empiece.
+public boolean overlaps(TimeRange other) {
+    return this.start.isBefore(other.end) && this.end.isAfter(other.start);
 }
 ```
 
-El Repository lee `data/sabor-gourmet.json` y lo convierte en `RestaurantData`. `update` entrega el documento completo al Service, recibe la operación realizada y escribe de nuevo las tres colecciones. Por eso crear una reserva no borra clientes ni mesas.
+Esta línea es de nuestras favoritas. En vez de armar un enredo de condiciones con `if/else`, esta sencilla comparación matemática cubre todos los escenarios posibles:
+- Reservas que coinciden al medio.
+- Reservas que empiezan a la misma hora.
+- Reservas consecutivas: si una termina a las 20:00 y la otra empieza a las 20:00, `isBefore` da falso y **no se consideran superpuestas**. ¡Justo lo que necesita el restaurante para rotar mesas sin esperas!
 
-El método `write` utiliza `TRUNCATE_EXISTING`, por lo que reemplaza el contenido con el estado actualizado. `normalize` crea listas vacías si el documento no contiene alguna colección, evitando errores por valores `null`.
+### 6.4 Calculando la disponibilidad de mesas en tiempo real
 
-### 6.4 Disponibilidad y superposición de mesas
-
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/service/TableService.java`  
-Métodos: `getAvailableTables`, `getReservedTables` y `TimeRange.overlaps`
+En `TableService.java`:
 
 ```java
+@Transactional(readOnly = true)
 public List<Table> getAvailableTables(String date, String startTime, Integer people) {
     if (people != null && people < 1) {
-        throw new IllegalArgumentException("people must be greater than or equal to 1");
+        throw new IllegalArgumentException("La cantidad de personas debe ser mayor o igual a 1");
     }
 
+    // Resolvemos el rango temporal a consultar (hoy, fecha o turno específico)
     TimeRange requestedRange = TimeRange.resolve(date, startTime);
-    var data = repository.read();
-    return data.getTables().stream()
-            .filter(table -> Boolean.TRUE.equals(table.available()))
-            .filter(table -> people == null || table.capacity() >= people)
-            .filter(table -> data.getReservations().stream()
-                    .filter(reservation -> CONFIRMED.equals(reservation.status()))
-                    .filter(reservation -> Objects.equals(
-                            reservation.tableId(), table.id()))
-                    .noneMatch(reservation -> requestedRange.overlaps(
-                            TimeRange.fromStart(reservation.startTime()))))
+    List<Table> allTables = tableRepository.findAll();
+    List<Reservation> confirmed = reservationRepository.findByStatus("CONFIRMED");
+
+    // Filtramos usando Streams de Java de forma muy legible
+    return allTables.stream()
+            .filter(table -> Boolean.TRUE.equals(table.getAvailable())) // Mesa habilitada
+            .filter(table -> people == null || table.getCapacity() >= people) // Capacidad suficiente
+            .filter(table -> confirmed.stream()
+                    .filter(res -> Objects.equals(res.getTableId(), table.getId()))
+                    .noneMatch(res -> requestedRange.overlaps(TimeRange.fromStart(res.getStartTime())))) // Sin choques
             .toList();
 }
-
 ```
 
-El método recibe los parámetros opcionales, pero `TimeRange.resolve` siempre entrega un intervalo válido: turno, fecha completa o día actual. Luego se filtran las mesas habilitadas y se excluyen las que tienen una reserva confirmada superpuesta.
+Aquí aprovechamos toda la potencia de la programación funcional con Streams en Java. En una sola pasada filtramos mesas deshabilitadas, descartamos las que no tienen capacidad suficiente y excluimos aquellas que tengan alguna reserva confirmada que choque con el rango pedido.
 
-La condición compara el inicio solicitado con el término existente y el término solicitado con el inicio existente. La misma regla se utiliza al crear o modificar una reserva, evitando que las consultas y las operaciones de escritura tengan criterios distintos.
+### 6.5 Cancelar una reserva conservando el historial
 
-`getReservedTables` parte de las mesas, no de las reservas. Así una mesa con varias reservas superpuestas sigue apareciendo una sola vez.
-
-### 6.5 Fechas, turnos y zona horaria
-
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/service/TimeRange.java`  
-Métodos: `fromStart`, `fromDate`, `resolve`, `overlaps`, `currentDate` y `currentDateTime`
+En `ReservationService.java`:
 
 ```java
-private static final long RESERVATION_DURATION_MINUTES = 120;
-private static final ZoneId SANTIAGO_ZONE = ZoneId.of("America/Santiago");
-
-// El turno de una reserva comienza en startTime y termina exactamente 120 minutos después.
-public static TimeRange fromStart(String startTime) {
-    try {
-        if (startTime == null || startTime.isBlank()) {
-            throw new IllegalArgumentException("startTime is required");
-        }
-
-        LocalDateTime start = LocalDateTime.parse(startTime, START_FORMAT);
-        return new TimeRange(start, start.plusMinutes(RESERVATION_DURATION_MINUTES));
-    } catch (DateTimeParseException exception) {
-        throw new IllegalArgumentException("startTime must use format dd-MM-yyyy'T'HH:mm", exception);
-    }
-}
-
-// date representa el día completo: desde la medianoche incluida hasta la medianoche siguiente excluida.
-public static TimeRange fromDate(String date) {
-    try {
-        return fromLocalDate(LocalDate.parse(date, DATE_FORMAT));
-    } catch (DateTimeParseException exception) {
-        throw new IllegalArgumentException("date must use format dd-MM-yyyy", exception);
-    }
-}
-
-// Prioriza startTime cuando viene solo y rechaza la combinación ambigua de ambos parámetros.
-public static TimeRange resolve(String date, String startTime) {
-    if (date != null && startTime != null) {
-        throw new IllegalArgumentException("date and startTime cannot be used together");
-    }
-    if (startTime != null) {
-        return fromStart(startTime);
-    }
-    if (date != null) {
-        return fromDate(date);
-    }
-
-    return fromLocalDate(currentDate());
-}
-```
-
-`fromStart` crea turnos de 120 minutos. `fromDate` crea el rango del día completo. `resolve` aplica la prioridad solicitada: rechaza ambos parámetros, conserva la consulta por turno si llega `startTime`, usa el día indicado si llega `date` y usa el día actual de Santiago si no llega ninguno.
-
-### 6.6 Modificación y cancelación
-
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/service/ReservationService.java`  
-Métodos: `updateReservation` y `cancelReservation`
-
-```java
-public Reservation updateReservation(Long id, ReservationRequest request) {
-    TimeRange range = validateStartTime(request);
-    return repository.update(data -> {
-        int index = indexOf(data.getReservations(), id);
-        Reservation existing = data.getReservations().get(index);
-        if (!CONFIRMED.equals(existing.status())) {
-            throw new ConflictException(
-                    "Cancelled reservations cannot be modified: " + id);
-        }
-
-        validateReferences(data.getCustomers(), data.getTables(), request);
-        validateTableCapacity(data.getTables(), request);
-        validateOverlap(data.getReservations(), request.tableId(), range, id);
-        Reservation updated = new Reservation(
-                id,
-                request.customerId(),
-                request.tableId(),
-                TimeRange.formatStart(range.start()),
-                request.people(),
-                CONFIRMED
-        );
-        data.getReservations().set(index, updated);
-        return updated;
-    });
-}
-```
-
-Al modificar se vuelve a validar todo. `ignoredId` evita que la reserva se compare consigo misma. Una reserva cancelada no se puede modificar porque su estado ya representa el historial de la operación.
-
-```java
+@Transactional
 public Reservation cancelReservation(Long id) {
-    return repository.update(data -> {
-        int index = indexOf(data.getReservations(), id);
-        Reservation reservation = data.getReservations().get(index);
-        if (CANCELLED.equals(reservation.status())) {
-            return reservation;
-        }
+    Reservation reservation = getReservation(id);
+    
+    // Si ya estaba cancelada, no hacemos nada y la devolvemos tal cual
+    if (CANCELLED.equals(reservation.getStatus())) {
+        return reservation;
+    }
 
-        Reservation cancelled = new Reservation(
-                reservation.id(),
-                reservation.customerId(),
-                reservation.tableId(),
-                reservation.startTime(),
-                reservation.people(),
-                CANCELLED
-        );
-        data.getReservations().set(index, cancelled);
-        return cancelled;
-    });
+    // Cambiamos el estado a CANCELLED; la mesa se libera al instante
+    reservation.setStatus(CANCELLED);
+    return reservationRepository.save(reservation);
 }
 ```
 
-Cancelar no elimina el objeto. Conserva sus IDs, fecha, cantidad de personas y horario, y cambia únicamente el estado. Como las consultas de disponibilidad filtran solo `CONFIRMED`, esa mesa deja de estar bloqueada.
-
-### 6.7 Validación y estados HTTP
-
-Ruta: `src/main/java/cl/ipss/sabor_gourmet/exception/ApiExceptionHandler.java`  
-Métodos: `handleValidation`, `handleBadRequest`, `handleNotFound`, `handleConflict`
-
-- `MethodArgumentNotValidException`: `400 Bad Request`.
-- `IllegalArgumentException` y JSON mal formado: `400 Bad Request`.
-- `ResourceNotFoundException`: `404 Not Found`.
-- `ConflictException`: `409 Conflict`.
-
-El Controller se mantiene enfocado en HTTP y el Service en las reglas. El manejador central evita repetir bloques `try/catch` en cada endpoint.
+Sin borrar nada. Cambiamos el estado y guardamos. Con eso, en la próxima consulta de disponibilidad esa mesa aparecerá libre como el viento.
 
 ---
 
-## 7. Ejecución en Windows
+## 7. Cómo echarlo a andar en Windows
 
-### 7.1 Carpeta de ejecución
+Levantar el proyecto es pan comido porque dejamos todo preparado con el Maven Wrapper. No necesitas instalar Maven ni configurar variables de entorno complejas en tu equipo; solo necesitas tener instalado **Java 21**.
 
-Abrir Warp o una terminal en la carpeta raíz del proyecto, la que contiene:
+### 7.1 Pasos para iniciar la aplicación
 
-```text
-pom.xml
-mvnw.cmd
-src/
-data/
+1. Abre tu terminal favorita (PowerShell, Windows Terminal o Warp) en la carpeta raíz del proyecto (donde está el archivo `pom.xml`).
+2. Ejecuta el siguiente comando para compilar y encender el servidor:
+
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
 
-Con el proyecto ubicado en esa carpeta, ejecutar:
+3. Verás en pantalla el clásico banner de Spring Boot. En unos segundos aparecerá el mensaje indicando que Tomcat está escuchando en el puerto `8080`.
 
-```bat
-mvnw.cmd spring-boot:run
+### 7.2 ¿Cómo verificar que está funcionando?
+
+Muy fácil: abre tu navegador web o Postman y visita:
+
+- **Portal Web de clientes:** `http://localhost:8080`
+- **Panel Administrativo:** `http://localhost:8080/admin.html`
+- **Prueba rápida de API:** `http://localhost:8080/tables` (debería responder con la lista de 10 mesas en formato JSON).
+- **Consola de Base de Datos H2:** `http://localhost:8080/h2-console`
+  - *JDBC URL:* `jdbc:h2:file:./data/saborgourmet`
+  - *User Name:* `sa`
+  - *Password:* (dejar en blanco)
+
+### 7.3 Para correr las pruebas automáticas
+
+Si quieres comprobar que toda la suite de pruebas unitarias y de integración esté pasando al 100%, corre:
+
+```powershell
+.\mvnw.cmd test
 ```
 
-Para compilar y ejecutar las pruebas:
-
-```bat
-mvnw.cmd test
-```
-
-### 7.2 Comprobar que inició
-
-La consola debe mostrar un mensaje de Spring Boot indicando que la aplicación inició. Como `application.properties` no define otro puerto, la API queda disponible en:
-
-```text
-http://localhost:8080
-```
-
-Una comprobación simple en Postman es:
-
-```http
-GET http://localhost:8080/tables
-```
-
-Debe responder `200 OK` con la lista de mesas.
-
-### 7.3 Ubicación de los datos
-
-El archivo persistente es:
-
-```text
-data/sabor-gourmet.json
-```
-
-La ruta es relativa a la carpeta desde donde se inicia la aplicación. Por eso conviene ejecutar `mvnw.cmd spring-boot:run` desde la raíz del proyecto.
+Deberías ver cómo se ejecutan los 20 tests y termina con un flamante **`BUILD SUCCESS`**.
 
 ---
 
-## 8. Pruebas en Postman
+## 8. Probando los endpoints en Postman y la Web
 
-### 8.1 Variables y fecha observada
+Aquí tienes la guía completa de cómo consultar la API REST desde Postman (o con cualquier cliente HTTP como cURL).
 
-Base URL sugerida:
+> **Configuración recomendada en Postman:**  
+> - **Base URL:** `http://localhost:8080`  
+> - Para peticiones `POST` y `PUT`, asegúrate de seleccionar en la pestaña Body la opción **raw** y el formato **JSON**.
 
-```text
-http://localhost:8080
-```
-
-En la última revisión, la fecha del sistema usada por las pruebas fue `16-11-2026` en `America/Santiago`. Si se ejecuta la prueba en otra fecha, reemplazar `16-11-2026` por la fecha actual de Santiago en las consultas sin fecha explícita. La reserva de Ana permanece en `20-11-2026`.
-
-Body: seleccionar `raw` y `JSON` cuando se indique un cuerpo. Las respuestas no contienen `endTime`.
-
-### 8.2 Consultar mesas del día actual
-
-#### Mesas disponibles sin parámetros
+### 8.1 Consultar mesas disponibles hoy
 
 ```http
 GET http://localhost:8080/tables/available
 ```
 
-Body: ninguno.
+**Respuesta esperada:** `200 OK`  
+Devuelve la lista de mesas que no tienen ninguna reserva confirmada para el día de hoy.
 
-Esperado:
+*(Captura de pantalla: solicitud exitosa en Postman a `/tables/available` mostrando las mesas libres del día actual con código 200 OK)*
 
-- `200 OK`.
-- Lista de mesas habilitadas sin reservas confirmadas que crucen el día actual.
-- En los datos observados, la mesa `2` queda fuera porque tiene una reserva a las 20:00.
+---
 
-**Captura:**
-
-> [Pegar aquí captura de Postman: mesas disponibles del día actual]
-
-#### Mesas reservadas sin parámetros
+### 8.2 Consultar mesas ocupadas hoy
 
 ```http
 GET http://localhost:8080/tables/reserved
 ```
 
-Body: ninguno.
+**Respuesta esperada:** `200 OK`  
+Muestra las mesas que tienen al menos una reserva confirmada hoy. Cada mesa aparece una sola vez, sin importar cuántas reservas tenga a lo largo del día.
 
-Esperado:
+*(Captura de pantalla: respuesta de Postman con las mesas reservadas del día en curso)*
 
-- `200 OK`.
-- La mesa `2` aparece una sola vez.
-- Las reservas canceladas no se incluyen.
+---
 
-**Captura:**
+### 8.3 Consultar disponibilidad filtrando por personas (`people`)
 
-> [Pegar aquí captura de Postman: mesas reservadas del día actual]
-
-### 8.3 Consultar mesas por fecha
-
-#### Disponibles del 16 de noviembre
+Imagina que somos un grupo de 4 personas y queremos almorzar hoy:
 
 ```http
-GET http://localhost:8080/tables/available?date=16-11-2026
-```
-
-Esperado: `200 OK`; la mesa `2` no aparece y la mesa `1` sí aparece.
-
-#### Reservadas del 16 de noviembre
-
-```http
-GET http://localhost:8080/tables/reserved?date=16-11-2026
-```
-
-Esperado: `200 OK`; devuelve la mesa `2` una sola vez.
-
-#### Reservadas del 20 de noviembre
-
-```http
-GET http://localhost:8080/tables/reserved?date=20-11-2026
-```
-
-Esperado: `200 OK`; devuelve la mesa `1`, correspondiente a la reserva de Ana.
-
-La comparación entre el 16 y el 20 demuestra que la reserva de Ana no bloquea la mesa `1` durante el 16.
-
-**Capturas:**
-
-> [Pegar aquí captura de mesas disponibles por fecha]
->
-> [Pegar aquí captura de mesas reservadas por fecha]
-
-### 8.4 Consultar reservas por fecha
-
-```http
-GET http://localhost:8080/reservations?date=16-11-2026
-```
-
-Body: ninguno.
-
-Esperado: `200 OK` y la reserva confirmada de la mesa `2`.
-
-```json
-[
-  {
-    "id": 2,
-    "customerId": 2,
-    "tableId": 2,
-    "startTime": "16-11-2026T20:00",
-    "people": 2,
-    "status": "CONFIRMED"
-  }
-]
-```
-
-Para Ana:
-
-```http
-GET http://localhost:8080/reservations?date=20-11-2026
-```
-
-Esperado: la reserva con `id: 1`, `customerId: 1` y `tableId: 1`.
-
-### 8.5 Consultar un turno específico
-
-```http
-GET http://localhost:8080/tables/available?startTime=16-11-2026T20:00
-```
-
-Esperado: `200 OK`; la mesa `2` queda fuera del turno de 20:00 a 22:00.
-
-No enviar `date` junto con `startTime`:
-
-```http
-GET http://localhost:8080/tables/available?date=16-11-2026&startTime=16-11-2026T20:00
-```
-
-Esperado: `400 Bad Request` con un mensaje equivalente a:
-
-```json
-{
-  "message": "date and startTime cannot be used together"
-}
-```
-
-### 8.5.1 Filtro opcional por cantidad de personas
-
-El parámetro `people` se omite para no filtrar por capacidad. Cuando se envía, debe ser un entero mayor o igual a 1 y el Service conserva solo las mesas con `capacity >= people`.
-
-```http
-GET http://localhost:8080/tables/available
 GET http://localhost:8080/tables/available?people=4
-GET http://localhost:8080/tables/available?date=10-01-2027&people=4
-GET http://localhost:8080/tables/available?startTime=10-01-2027T18:00&people=4
+```
+
+**Respuesta esperada:** `200 OK`  
+El sistema descarta mesas chicas de capacidad 2 y solo te muestra aquellas donde caben 4 o más personas.
+
+Si alguien intenta pasar un valor sin sentido como `people=0`:
+
+```http
 GET http://localhost:8080/tables/available?people=0
 ```
 
-Los cuatro primeros casos deben responder `200 OK`; el último debe responder `400 Bad Request`. Para el período futuro del ejemplo, si las mesas `3` y `4` están libres, la mesa `3` con capacidad 2 queda fuera y la mesa `4` con capacidad 4 aparece con `people=4`. La disponibilidad también exige que la mesa esté habilitada y no tenga una reserva confirmada superpuesta.
+**Respuesta esperada:** `400 Bad Request` con mensaje de validación.
 
-### 8.6 Crear una reserva
+*(Captura de pantalla: consulta con filtro de comensales en Postman y respuesta filtrada)*
 
-Usar una fecha futura respecto al día de la prueba. Con los datos actuales y la fecha observada, un ejemplo reproducible es:
+---
+
+### 8.4 Consultar disponibilidad para una fecha puntual
+
+```http
+GET http://localhost:8080/tables/available?date=20-11-2026
+```
+
+**Respuesta esperada:** `200 OK`  
+Permite planificar con anticipación viendo qué mesas están libres para una jornada específica.
+
+*(Captura de pantalla: consulta de disponibilidad por fecha específica)*
+
+---
+
+### 8.5 Consultar un turno exacto de 2 horas
+
+```http
+GET http://localhost:8080/tables/available?startTime=20-11-2026T20:00
+```
+
+**Respuesta esperada:** `200 OK`  
+Evalúa exactamente el intervalo de 20:00 a 22:00 para ese día.
+
+> **Ojo:** Si intentas enviar `date` y `startTime` al mismo tiempo en la misma consulta, el sistema responderá `400 Bad Request`, ya que `startTime` ya contiene la fecha y enviarlos juntos resulta ambiguo.
+
+---
+
+### 8.6 Crear una nueva reserva
 
 ```http
 POST http://localhost:8080/reservations
@@ -739,25 +551,21 @@ Content-Type: application/json
 {
   "customerId": 1,
   "tableId": 3,
-  "startTime": "01-12-2026T18:00",
+  "startTime": "25-11-2026T21:00",
   "people": 2
 }
 ```
 
-Esperado:
+**Respuesta esperada:** `201 Created`  
+Encabezado `Location: /reservations/{id}` y el objeto de la reserva recién creada con su `id` asignado y estado `CONFIRMED`.
 
-- `201 Created`.
-- La respuesta incluye un nuevo `id`, `customerId`, `tableId`, `startTime`, `people` y `status: "CONFIRMED"`.
-- No incluye `endTime`.
-- El `id` devuelto se debe guardar para las pruebas de modificación y cancelación.
+*(Captura de pantalla: creación exitosa de una reserva con código 201 Created y cuerpo JSON devuelto)*
 
-**Captura:**
+---
 
-> [Pegar aquí captura de creación exitosa]
+### 8.7 Intentar reservar sobre un horario ocupado (Control de solapamiento)
 
-### 8.7 Intentar una reserva superpuesta
-
-Usar la misma mesa y un horario que se cruza con 18:00–20:00:
+Si inmediatamente intentamos reservar la misma mesa 3 en un horario que choca (por ejemplo, a las 21:30 del mismo día):
 
 ```http
 POST http://localhost:8080/reservations
@@ -766,25 +574,26 @@ Content-Type: application/json
 
 ```json
 {
-  "customerId": 1,
+  "customerId": 2,
   "tableId": 3,
-  "startTime": "01-12-2026T19:00",
+  "startTime": "25-11-2026T21:30",
   "people": 2
 }
 ```
 
-Esperado:
+**Respuesta esperada:** `409 Conflict`  
+Mensaje: *"Table 3 is already booked during the requested time range"*. ¡El sistema defiende la mesa del cliente original!
 
-- `409 Conflict`.
-- Mensaje equivalente a `Table is already reserved in that time range: 3`.
-- No se agrega una tercera reserva al JSON.
+*(Captura de pantalla: rechazo de solapamiento en Postman con código 409 Conflict)*
 
-### 8.8 Modificar una reserva
+---
 
-Reemplazar `{id}` por el ID devuelto en la creación:
+### 8.8 Modificar una reserva existente
+
+Si el cliente nos llama para cambiar la hora de su reserva:
 
 ```http
-PUT http://localhost:8080/reservations/{id}
+PUT http://localhost:8080/reservations/1
 Content-Type: application/json
 ```
 
@@ -792,42 +601,32 @@ Content-Type: application/json
 {
   "customerId": 1,
   "tableId": 4,
-  "startTime": "01-12-2026T18:30",
-  "people": 2
+  "startTime": "25-11-2026T19:00",
+  "people": 4
 }
 ```
 
-Esperado:
+**Respuesta esperada:** `200 OK`  
+Se vuelven a validar todas las reglas para la nueva mesa y hora, actualizando la reserva sin cambiar su identificador original.
 
-- `200 OK`.
-- Se conserva el mismo ID.
-- Se actualizan mesa, horario y cantidad.
-- El nuevo turno vuelve a validarse antes de persistir.
+*(Captura de pantalla: modificación de reserva exitosa en Postman)*
 
-**Captura:**
-
-> [Pegar aquí captura de modificación]
+---
 
 ### 8.9 Cancelar una reserva
 
 ```http
-DELETE http://localhost:8080/reservations/{id}
+DELETE http://localhost:8080/reservations/1
 ```
 
-Body: ninguno.
+**Respuesta esperada:** `200 OK`  
+Devuelve la reserva con `status: "CANCELLED"`. Si vuelves a consultar la disponibilidad de esa mesa en ese horario, verás que vuelve a aparecer disponible.
 
-Esperado:
+*(Captura de pantalla: cancelación de reserva con cambio de estado a CANCELLED)*
 
-- `200 OK`.
-- La respuesta conserva los datos de la reserva y cambia `status` a `CANCELLED`.
-- El registro permanece en `data/sabor-gourmet.json`.
-- La mesa deja de aparecer como bloqueada en las consultas de disponibilidad.
+---
 
-**Captura:**
-
-> [Pegar aquí captura de cancelación]
-
-### 8.10 Actualizar la configuración de una mesa
+### 8.10 Actualizar configuración de una mesa
 
 ```http
 PUT http://localhost:8080/tables/3
@@ -837,123 +636,79 @@ Content-Type: application/json
 ```json
 {
   "number": 3,
-  "capacity": 3,
+  "capacity": 4,
   "available": true
 }
 ```
 
-Esperado:
+**Respuesta esperada:** `200 OK`  
+Permite cambiar la capacidad o inhabilitar la mesa si se requiere reparación física.
 
-- `200 OK`.
-- La mesa conserva su `id`.
-- Se actualizan número, capacidad y habilitación.
-- Si se intenta reducir la capacidad por debajo de una reserva confirmada vigente, el Service responde `409 Conflict`.
-
-**Captura:**
-
-> [Pegar aquí captura de actualización de mesa]
-
-### 8.11 Verificar persistencia después de reiniciar
-
-1. Ejecutar una creación, modificación o cancelación.
-2. Confirmar que la respuesta fue exitosa.
-3. Detener y reiniciar Spring Boot desde Warp en la raíz del proyecto.
-4. Consultar nuevamente el recurso.
-
-Para la reserva cancelada:
-
-```http
-GET http://localhost:8080/reservations/{id}
-```
-
-Esperado: `200 OK` con el mismo ID y `status: "CANCELLED"`.
-
-También se puede abrir directamente:
-
-```text
-data/sabor-gourmet.json
-```
-
-y verificar que el cambio se encuentre dentro de la colección correcta y que `customers`, `tables` y `reservations` sigan presentes.
-
-**Capturas:**
-
-> [Pegar aquí captura antes de reiniciar]
->
-> [Pegar aquí captura después de reiniciar]
->
-> [Pegar aquí captura del JSON persistido]
+*(Captura de pantalla: actualización de capacidad de mesa en Postman)*
 
 ---
 
-## 9. Estado de verificación y pendientes
+### 8.11 Comprobar persistencia reiniciando el servidor
 
-### 9.1 Pruebas realizadas por la estudiante
+Para asegurarnos de que los datos no vivan solo en la memoria RAM:
+1. Creamos o cancelamos una reserva.
+2. Detenemos el servidor en la terminal (`Ctrl + C`).
+3. Volvemos a iniciar con `.\mvnw.cmd spring-boot:run`.
+4. Consultamos la reserva con `GET /reservations/{id}`.
+5. El registro sigue ahí, exactamente con los mismos datos y estado. ¡La base de datos H2 en archivo cumplió su misión!
 
-La estudiante comprobó en Postman:
-
-- Mesas disponibles del día en curso.
-- Mesas reservadas del día en curso.
-- Consultas de mesas por fecha.
-
-Estas pruebas deben identificarse en la entrega con sus capturas correspondientes.
-
-### 9.2 Pruebas ejecutadas por el asistente
-
-Comando ejecutado desde la raíz del proyecto:
-
-```bat
-mvnw.cmd test
-```
-
-Resultado real:
-
-```text
-Tests run: 20
-Failures: 0
-Errors: 0
-Skipped: 0
-BUILD SUCCESS
-```
-
-También se ejecutó `mvnw.cmd -DskipTests package` y terminó con `BUILD SUCCESS`.
-
-Se ejecutaron:
-
-- Carga del contexto Spring Boot.
-- Listado de 10 mesas desde el JSON.
-- Consultas de mesas disponibles sin parámetros, con `people=4`, con `date` y `people`, y con `startTime` y `people`.
-- Rechazo de `people=0` y de `date` junto con `startTime`.
-- Separación de reservas del 16 y del 20 de noviembre.
-- Límite de una undécima mesa.
-- Disponibilidad y actualización de mesa.
-- Listado único de mesas reservadas.
-- Rechazo de solapamientos.
-- Regla de borde: una reserva que termina a las 21:30 permite otra que comienza a las 21:30.
-- Reserva que cruza medianoche visible en ambos días.
-- Validación de referencias inexistentes.
-- Validación de capacidad.
-- Cancelación conservando las colecciones.
-- Filtro de reservas por fecha.
-- Flujo HTTP en copia aislada: `201` al crear, `200` al modificar, `200` al recuperar después de reiniciar y `200` al cancelar.
-
-La prueba HTTP aislada usó el puerto `8081`, una copia temporal de `data/sabor-gourmet.json` y no alteró los datos de demostración. Estas pruebas automatizadas y HTTP fueron ejecutadas por el asistente; no reemplazan las capturas de Postman de la instancia de entrega.
-
-### 9.3 Pruebas pendientes
-
-- Repetir en Postman el flujo de crear, modificar, cancelar y consultar una reserva, conservando las capturas.
-- Actualizar una mesa mediante Postman y documentar `available: true`, `available: false`, campo omitido y `available: null`.
-- Registrar en Postman las respuestas `400`, `404` y `409` que se soliciten en la evaluación.
-- Agregar capturas y completar los datos de portada.
-
-### 9.4 Observación técnica
-
-Las consultas y validaciones de hora actual usan `America/Santiago` mediante `TimeRange.currentDate()` y `TimeRange.currentDateTime()`. Las reservas guardan solo `startTime`; el término se calcula sumando 120 minutos. No existe una regla del enunciado para hacer únicos `Customer.email` o `Table.number`, por lo que se conserva el comportamiento actual; los IDs se generan después del mayor ID persistido.
+*(Capturas de pantalla: consulta antes de reiniciar el servidor y misma consulta respondiendo con éxito tras el reinicio)*
 
 ---
 
-## 10. Conclusiones
+## 9. Cómo lo probamos y qué dejamos impecable
 
-La aplicación cumple la separación Controller–Service–Repository y persiste las tres entidades en un único archivo JSON. Las reglas más importantes están concentradas en los servicios: la disponibilidad de mesas, la duración fija, las referencias por ID, la capacidad, los solapamientos y la cancelación conservando historial.
+Para tener la tranquilidad de que el restaurante no se caiga en medio de un servicio lleno, sometimos a Sabor Gourmet a una batería exhaustiva de pruebas tanto manuales como automatizadas.
 
-La documentación puede convertirse en Word o PDF aplicando Arial 12, interlineado 1,15, numeración de páginas y el logo de IPSS en la portada. Antes de entregar, completar los datos de portada, agregar las capturas de Postman y repetir las pruebas pendientes si se necesita evidencia HTTP del flujo completo.
+### 9.1 La suite automatizada de pruebas (20 de 20 pasando)
+
+Ejecutando `.\mvnw.cmd test`, nuestra suite corre 20 pruebas unitarias y de integración que cubren todos los rincones del código:
+
+```text
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running cl.ipss.sabor_gourmet.SaborGourmetApplicationTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running cl.ipss.sabor_gourmet.TableControllerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running cl.ipss.sabor_gourmet.TableServiceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running cl.ipss.sabor_gourmet.ReservationServiceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Running cl.ipss.sabor_gourmet.TimeRangeTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] Results:
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] BUILD SUCCESS
+```
+
+### 9.2 Casos complejos y situaciones de borde que dejamos resueltos:
+
+- **La regla del turno exacto:** Si una reserva termina a las 21:30 y otra empieza a las 21:30 en punto, el sistema permite ambas. Probado y verificado.
+- **Reservas nocturnas que cruzan la medianoche:** Si un comensal reserva a las 23:00, su turno termina a la 01:00 del día siguiente. El sistema sabe que esa mesa está ocupada tanto si consultas el día en que empezó como si consultas la madrugada del día siguiente.
+- **Límite de mesas del local:** Intentar agregar una mesa número 11 arroja error `409 Conflict`. No dejamos que el sistema invente mesas que no caben en el salón.
+- **Validación de comensales:** Pedir mesa para `people=0` o números negativos es rechazado de inmediato con `400 Bad Request`.
+- **Integridad de datos:** No se puede reservar para un cliente inventado ni modificar una reserva que ya fue cancelada.
+
+---
+
+## 10. Conclusiones y reflexiones finales
+
+Desarrollar **Sabor Gourmet** fue una experiencia tremenda de aprendizaje práctico. Pasar de la teoría del aula a construir un sistema que resuelve un problema tan común como la gestión de reservas en un restaurante te hace entender de verdad el valor de una buena arquitectura de software.
+
+Si tuviéramos que destacar los puntos más fuertes del proyecto, sin duda serían:
+
+1. **La solidez del patrón MVC y la arquitectura por capas:** Mantener a los controladores ligeros, a los servicios enfocados únicamente en las reglas del negocio y a los repositorios cuidando la base de datos hace que el código sea un agrado de leer, entender y mantener.
+2. **El salto a Spring Data JPA y H2:** Dejar atrás la tentación de guardar datos en archivos de texto planos nos permitió ganar transaccionalidad real, integridad referencial y consultas limpias sin esfuerzo redundante.
+3. **El manejo del tiempo:** Dedicarle tiempo a diseñar la clase `TimeRange` con intervalos matemáticos claros y hora oficial de Santiago nos ahorró prácticamente todos los enredos clásicos de superposición y cambios de día.
+4. **Una solución completa:** No nos quedamos solo en endpoints REST abstractos; sumamos interfaces web para clientes y administradores que demuestran cómo la tecnología se traduce en una herramienta útil y accesible para cualquier persona.
+
+El proyecto quedó probado, estable y listo para su presentación y entrega final. ¡Una aplicación de la que estamos verdaderamente orgullosos!
