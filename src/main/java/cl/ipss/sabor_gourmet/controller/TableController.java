@@ -19,7 +19,7 @@ import java.net.URI;
 import java.util.List;
 
 /**
- * Expone el inventario de mesas y las consultas de disponibilidad.
+ * Expone el inventario de mesas y las consultas de disponibilidad para el API REST
  */
 @RestController
 @RequestMapping("/tables")

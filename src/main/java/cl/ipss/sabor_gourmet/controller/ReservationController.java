@@ -19,7 +19,7 @@ import java.net.URI;
 import java.util.List;
 
 /**
- * Expone las consultas y operaciones de reservas mediante JSON y ResponseEntity.
+ * Expone las consultas y operaciones de reservas para el API REST
  */
 @RestController
 @RequestMapping("/reservations")

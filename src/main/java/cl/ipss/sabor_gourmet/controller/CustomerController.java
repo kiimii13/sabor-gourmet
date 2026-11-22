@@ -18,7 +18,7 @@ import java.net.URI;
 import java.util.List;
 
 /**
- * Expone las operaciones HTTP de clientes
+ * Expone las operaciones HTTP de clientes para el API REST
  */
 @RestController
 @RequestMapping("/customers")
